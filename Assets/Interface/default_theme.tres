@@ -1,0 +1,38 @@
+[gd_resource type="Theme" load_steps=7 format=3 uid="uid://cq0ob8v8ekfds"]
+
+[ext_resource type="FontFile" uid="uid://cojsrixcj0uqx" path="res://Assets/Interface/m3x6.ttf" id="1_hjiu0"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ug721"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_fq3ck"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_fedcf"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5k60l"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hjiu0"]
+
+[resource]
+Button/colors/font_color = Color(0.87451, 0.87451, 0.87451, 0.454902)
+Button/colors/font_disabled_color = Color(0.886275, 0.254902, 0.341176, 0.819608)
+Button/fonts/font = ExtResource("1_hjiu0")
+Button/styles/disabled = null
+Button/styles/focus = SubResource("StyleBoxEmpty_ug721")
+Button/styles/hover = SubResource("StyleBoxEmpty_fq3ck")
+Button/styles/normal = SubResource("StyleBoxEmpty_fedcf")
+Button/styles/pressed = SubResource("StyleBoxEmpty_5k60l")
+Label/colors/font_color = Color(1, 1, 1, 1)
+Label/colors/font_outline_color = Color(0, 0, 0, 1)
+Label/colors/font_shadow_color = Color(0, 0, 0, 0)
+Label/constants/line_spacing = 0
+Label/constants/outline_size = 0
+Label/constants/shadow_offset_x = 1
+Label/constants/shadow_offset_y = 1
+Label/constants/shadow_outline_size = 1
+Label/font_sizes/font_size = 16
+Label/fonts/font = ExtResource("1_hjiu0")
+Label/styles/normal = SubResource("StyleBoxEmpty_hjiu0")
+MarginContainer/constants/margin_bottom = 4
+MarginContainer/constants/margin_left = 4
+MarginContainer/constants/margin_right = 4
+MarginContainer/constants/margin_top = 4

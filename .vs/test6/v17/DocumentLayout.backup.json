@@ -1,0 +1,41 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "F:\\Projects\\ProjectJose\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{1EA9924E-8201-4A44-B0FD-2786233C8987}|test6.csproj|f:\\projects\\projectjose\\assets\\interface\\menu.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1EA9924E-8201-4A44-B0FD-2786233C8987}|test6.csproj|solutionrelative:assets\\interface\\menu.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 206,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Menu.cs",
+              "DocumentMoniker": "F:\\Projects\\ProjectJose\\Assets\\Interface\\Menu.cs",
+              "RelativeDocumentMoniker": "Assets\\Interface\\Menu.cs",
+              "ToolTip": "F:\\Projects\\ProjectJose\\Assets\\Interface\\Menu.cs",
+              "RelativeToolTip": "Assets\\Interface\\Menu.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-12T15:54:47.631Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
