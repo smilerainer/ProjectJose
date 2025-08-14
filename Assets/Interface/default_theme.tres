@@ -36,3 +36,4 @@ MarginContainer/constants/margin_bottom = 4
 MarginContainer/constants/margin_left = 4
 MarginContainer/constants/margin_right = 4
 MarginContainer/constants/margin_top = 4
+RichTextLabel/fonts/normal_font = ExtResource("1_hjiu0")

@@ -1,8 +1,10 @@
-[gd_scene load_steps=2 format=3 uid="uid://b82mukv4f8x8b"]
+[gd_scene load_steps=3 format=3 uid="uid://b82mukv4f8x8b"]
 
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="1_ml1pb"]
+[ext_resource type="Script" uid="uid://b4cqyr03mr1vl" path="res://Assets/Interface/Menu.cs" id="1_rxfql"]
 
 [node name="Battle" type="CanvasLayer"]
+script = ExtResource("1_rxfql")
 
 [node name="Control" type="Control" parent="."]
 layout_mode = 3
