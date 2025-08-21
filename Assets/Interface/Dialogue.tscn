@@ -1,11 +1,13 @@
-[gd_scene load_steps=3 format=3 uid="uid://c30k8cxuia6f5"]
+[gd_scene load_steps=5 format=3 uid="uid://c30k8cxuia6f5"]
 
+[ext_resource type="Texture2D" uid="uid://co6vswgr16eb6" path="res://Assets/Dialogue/default_border.png" id="1_he0po"]
+[ext_resource type="Texture2D" uid="uid://co0gg2oqyvckn" path="res://Assets/Dialogue/default_dialogue.png" id="1_k0cxo"]
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="1_k5f8h"]
 [ext_resource type="Texture2D" uid="uid://b7mqiykktuwvt" path="res://Assets/Interface/default_cursor_down.png" id="2_k0cxo"]
 
 [node name="Dialogue" type="CanvasLayer"]
 
-[node name="Control" type="Control" parent="."]
+[node name="Graphics" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -13,7 +15,206 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="CharacterName" type="MarginContainer" parent="Control"]
+[node name="SpriteEven" type="HBoxContainer" parent="Graphics"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="A" type="Control" parent="Graphics/SpriteEven"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteEven/A"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+texture = ExtResource("1_he0po")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+
+[node name="B" type="Control" parent="Graphics/SpriteEven"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteEven/B"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+texture = ExtResource("1_he0po")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+
+[node name="C" type="Control" parent="Graphics/SpriteEven"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteEven/C"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+texture = ExtResource("1_he0po")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+
+[node name="D" type="Control" parent="Graphics/SpriteEven"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteEven/D"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+texture = ExtResource("1_he0po")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+
+[node name="SpriteOdd" type="HBoxContainer" parent="Graphics"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="A" type="Control" parent="Graphics/SpriteOdd"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteOdd/A"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+texture = ExtResource("1_he0po")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+
+[node name="B" type="Control" parent="Graphics/SpriteOdd"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteOdd/B"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+texture = ExtResource("1_he0po")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+
+[node name="C" type="Control" parent="Graphics/SpriteOdd"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteOdd/C"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+texture = ExtResource("1_he0po")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+
+[node name="DefaultDialogue" type="Sprite2D" parent="Graphics/SpriteOdd/C"]
+position = Vector2(28, 89)
+texture = ExtResource("1_k0cxo")
+
+[node name="D" type="Control" parent="Graphics/SpriteOdd"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteOdd/D"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+texture = ExtResource("1_he0po")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+
+[node name="E" type="Control" parent="Graphics/SpriteOdd"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteOdd/E"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+texture = ExtResource("1_he0po")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+
+[node name="Text" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CharacterName" type="MarginContainer" parent="Text"]
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
@@ -21,11 +222,11 @@ anchor_bottom = 1.0
 offset_top = -70.0
 offset_right = 86.0
 grow_vertical = 0
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_right = 8
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 40
 
-[node name="NinePatchRect" type="NinePatchRect" parent="Control/CharacterName"]
+[node name="NinePatchRect" type="NinePatchRect" parent="Text/CharacterName"]
 layout_mode = 2
 size_flags_vertical = 3
 texture = ExtResource("1_k5f8h")
@@ -34,14 +235,15 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="Label" type="Label" parent="Control/CharacterName"]
+[node name="Label" type="Label" parent="Text/CharacterName"]
 custom_minimum_size = Vector2(70, 0)
 layout_mode = 2
 size_flags_vertical = 1
-text = "\"Segismuhdo\""
+text = "Florante
+"
 horizontal_alignment = 1
 
-[node name="Dialogue" type="MarginContainer" parent="Control"]
+[node name="Dialogue" type="MarginContainer" parent="Text"]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -50,10 +252,10 @@ anchor_bottom = 1.0
 offset_top = -8.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_right = 8
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
 
-[node name="NinePatchRect" type="NinePatchRect" parent="Control/Dialogue"]
+[node name="NinePatchRect" type="NinePatchRect" parent="Text/Dialogue"]
 layout_mode = 2
 size_flags_vertical = 3
 texture = ExtResource("1_k5f8h")
@@ -62,24 +264,25 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Control/Dialogue"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Text/Dialogue"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="Control/Dialogue/HBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="Text/Dialogue/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_right = 16
 
-[node name="RichTextLabel" type="RichTextLabel" parent="Control/Dialogue/HBoxContainer/MarginContainer"]
+[node name="RichTextLabel" type="RichTextLabel" parent="Text/Dialogue/HBoxContainer/MarginContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Salamat sa iyo, O nanasang irog,
 kung halagahan mo itong aking pagod,
 ang tula ma'y bukal ng bait na kapos,
 pakikinabangan ng ibig tumarok."
+scroll_active = false
 
-[node name="DefaultCursorDown" type="Sprite2D" parent="Control/Dialogue"]
-position = Vector2(178, 43)
+[node name="DefaultCursorDown" type="Sprite2D" parent="Text/Dialogue"]
+position = Vector2(187, 43)
 texture = ExtResource("2_k0cxo")
