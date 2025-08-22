@@ -7,8 +7,8 @@
 [node name="TestBattle" type="Node2D"]
 
 [node name="World" parent="." instance=ExtResource("1_2x3n4")]
-position = Vector2(-8, -21)
-
-[node name="Battle" parent="." instance=ExtResource("2_q2r2a")]
 
 [node name="Dialogue" parent="." instance=ExtResource("2_3q4bn")]
+visible = false
+
+[node name="Battle" parent="." instance=ExtResource("2_q2r2a")]

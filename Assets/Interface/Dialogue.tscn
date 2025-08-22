@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://c30k8cxuia6f5"]
+[gd_scene load_steps=6 format=3 uid="uid://c30k8cxuia6f5"]
 
 [ext_resource type="Texture2D" uid="uid://co6vswgr16eb6" path="res://Assets/Dialogue/default_border.png" id="1_he0po"]
 [ext_resource type="Texture2D" uid="uid://co0gg2oqyvckn" path="res://Assets/Dialogue/default_dialogue.png" id="1_k0cxo"]
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="1_k5f8h"]
+[ext_resource type="Texture2D" uid="uid://dm48i7b36kj6x" path="res://Assets/Dialogue/default_background.png" id="1_xhlbx"]
 [ext_resource type="Texture2D" uid="uid://b7mqiykktuwvt" path="res://Assets/Interface/default_cursor_down.png" id="2_k0cxo"]
 
 [node name="Dialogue" type="CanvasLayer"]
@@ -14,6 +15,28 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="Background" type="Control" parent="Graphics"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Sprite2D" type="Sprite2D" parent="Graphics/Background"]
+visible = false
+position = Vector2(160, 90)
+texture = ExtResource("1_xhlbx")
+
+[node name="ColorRect" type="ColorRect" parent="Graphics/Background"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0980392, 0.141176, 0.109804, 0.501961)
 
 [node name="SpriteEven" type="HBoxContainer" parent="Graphics"]
 layout_mode = 1
@@ -239,8 +262,7 @@ patch_margin_bottom = 8
 custom_minimum_size = Vector2(70, 0)
 layout_mode = 2
 size_flags_vertical = 1
-text = "Florante
-"
+text = "Florence"
 horizontal_alignment = 1
 
 [node name="Dialogue" type="MarginContainer" parent="Text"]
