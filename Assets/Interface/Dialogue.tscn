@@ -25,7 +25,6 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Sprite2D" type="Sprite2D" parent="Graphics/Background"]
-visible = false
 position = Vector2(160, 90)
 texture = ExtResource("1_xhlbx")
 
