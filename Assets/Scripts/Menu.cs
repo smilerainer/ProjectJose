@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-public partial class Menu : CanvasLayer
+public partial class Menu : Control
 {
 	[Signal] public delegate void ButtonFocusedEventHandler(BaseButton button, int index);
 	[Signal] public delegate void ButtonPressedEventHandler(BaseButton button, int index);
@@ -50,8 +50,14 @@ public partial class Menu : CanvasLayer
 		{
 			if (ButtonsContainer == null)
 			{
-				GD.PrintErr($"[Menu:{Name}] ERROR: ButtonsContainer not set!");
-				return;
+				// Try to find a Control node in children if not explicitly set
+				ButtonsContainer = FindButtonsContainer();
+				
+				if (ButtonsContainer == null)
+				{
+					GD.PrintErr($"[Menu:{Name}] ERROR: ButtonsContainer not found!");
+					return;
+				}
 			}
 			
 			// Initialize buttons list from container
@@ -76,6 +82,50 @@ public partial class Menu : CanvasLayer
 			CallDeferred(nameof(ButtonFocus));
 			DebugLog("Will focus on ready");
 		}
+	}
+
+	private Control FindButtonsContainer()
+	{
+		// First, look for a direct Control child
+		foreach (Node child in GetChildren())
+		{
+			if (child is Control control && HasButtonChildren(control))
+			{
+				DebugLog($"Found buttons container: {control.Name}");
+				return control;
+			}
+		}
+		
+		// If not found, look deeper in the tree
+		return FindButtonsContainerRecursive(this);
+	}
+
+	private Control FindButtonsContainerRecursive(Node node)
+	{
+		foreach (Node child in node.GetChildren())
+		{
+			if (child is Control control && HasButtonChildren(control))
+			{
+				DebugLog($"Found buttons container recursively: {control.Name}");
+				return control;
+			}
+			
+			// Continue searching deeper
+			var result = FindButtonsContainerRecursive(child);
+			if (result != null)
+				return result;
+		}
+		return null;
+	}
+
+	private bool HasButtonChildren(Control control)
+	{
+		foreach (Node child in control.GetChildren())
+		{
+			if (child is BaseButton)
+				return true;
+		}
+		return false;
 	}
 
 	private void InitializeButtons()
@@ -443,5 +493,19 @@ public partial class Menu : CanvasLayer
 			GD.Print($"  [{i}] {btn.Name} - Visible: {btn.Visible}, Disabled: {btn.Disabled}, HasFocus: {btn.HasFocus()}");
 		}
 		GD.Print("======================");
+	}
+
+	// Additional helper method for Node2D specific functionality
+	public void SetMenuPosition(Vector2 position)
+	{
+		Position = position;
+		DebugLog($"Menu position set to: {position}");
+	}
+
+	// Helper to move the entire menu
+	public void MoveMenuBy(Vector2 offset)
+	{
+		Position += offset;
+		DebugLog($"Menu moved by: {offset}, new position: {Position}");
 	}
 }

@@ -1,21 +1,29 @@
-[gd_scene load_steps=2 format=3 uid="uid://ducsxw626vu8p"]
+[gd_scene load_steps=3 format=3 uid="uid://ducsxw626vu8p"]
 
+[ext_resource type="Script" uid="uid://b4cqyr03mr1vl" path="res://Assets/Scripts/Menu.cs" id="1_2y8ds"]
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="1_i2s4e"]
 
-[node name="Control" type="Control"]
-custom_minimum_size = Vector2(60, 40)
+[node name="CanvasLayer" type="Control" node_paths=PackedStringArray("ButtonsContainer")]
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_2y8ds")
+ButtonsContainer = NodePath("NinePatchRect/MarginContainer/PlayerOptions")
 
 [node name="NinePatchRect" type="NinePatchRect" parent="."]
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = -8.0
+offset_top = -8.0
+offset_right = 8.0
+offset_bottom = 8.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_vertical = 3
@@ -25,30 +33,30 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="PlayerOptions" type="FlowContainer" parent="."]
-custom_minimum_size = Vector2(60, 0)
+[node name="MarginContainer" type="MarginContainer" parent="NinePatchRect"]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -30.0
-offset_top = -15.0
-offset_right = 30.0
-offset_bottom = 15.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-size_flags_vertical = 8
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
 
-[node name="Button" type="Button" parent="PlayerOptions"]
+[node name="PlayerOptions" type="FlowContainer" parent="NinePatchRect/MarginContainer"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+
+[node name="Button" type="Button" parent="NinePatchRect/MarginContainer/PlayerOptions"]
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 size_flags_horizontal = 6
 size_flags_vertical = 4
 text = "Move"
 
-[node name="Button2" type="Button" parent="PlayerOptions"]
+[node name="Button2" type="Button" parent="NinePatchRect/MarginContainer/PlayerOptions"]
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 size_flags_horizontal = 6
@@ -56,14 +64,14 @@ size_flags_vertical = 4
 text = "Skill
 "
 
-[node name="Button3" type="Button" parent="PlayerOptions"]
+[node name="Button3" type="Button" parent="NinePatchRect/MarginContainer/PlayerOptions"]
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 size_flags_horizontal = 6
 size_flags_vertical = 4
 text = "Item"
 
-[node name="Button4" type="Button" parent="PlayerOptions"]
+[node name="Button4" type="Button" parent="NinePatchRect/MarginContainer/PlayerOptions"]
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 size_flags_horizontal = 6

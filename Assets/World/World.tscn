@@ -1,142 +1,58 @@
-[gd_scene load_steps=15 format=4 uid="uid://f2q4l46jsk8c"]
+[gd_scene load_steps=10 format=4 uid="uid://f2q4l46jsk8c"]
 
-[ext_resource type="Texture2D" uid="uid://bremap0b7vf64" path="res://Assets/World/florante.png" id="2_3hdf3"]
-[ext_resource type="Texture2D" uid="uid://cee7omi8efc4c" path="res://Assets/World/tiles.png" id="2_rw40b"]
-[ext_resource type="Texture2D" uid="uid://dxfqgpm3oa3lh" path="res://Assets/World/basehex.png" id="2_uxkm3"]
+[ext_resource type="TileSet" uid="uid://mkn6xih8ecpo" path="res://Assets/World/Tilesets/Ground_TileSet.tres" id="1_0ukkx"]
+[ext_resource type="Script" uid="uid://rt0asiw4i8ip" path="res://Assets/World/HexInputTest.cs" id="1_2o6ge"]
+[ext_resource type="Script" uid="uid://bot17no0e0dm8" path="res://Assets/World/HexGrid.cs" id="1_3p22m"]
+[ext_resource type="TileSet" uid="uid://vdekyx1aewa0" path="res://Assets/World/Tilesets/UI_TileSet.tres" id="2_3p22m"]
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="3_jfpqm"]
+[ext_resource type="TileSet" uid="uid://vbaxliadl1gn" path="res://Assets/World/Tilesets/Entity_TileSet.tres" id="3_rw40b"]
 [ext_resource type="Texture2D" uid="uid://b7mqiykktuwvt" path="res://Assets/Interface/default_cursor_down.png" id="4_0ukkx"]
-[ext_resource type="Texture2D" uid="uid://7t5na3aekxb4" path="res://Assets/World/enemies.png" id="4_2o6ge"]
-[ext_resource type="Texture2D" uid="uid://5giy8iqhwdxn" path="res://Assets/World/props.png" id="5_h7mlw"]
+[ext_resource type="TileSet" uid="uid://h8ctwsrda6b3" path="res://Assets/World/Tilesets/Obstacle_TileSet.tres" id="4_h7mlw"]
+[ext_resource type="Script" uid="uid://b2n3lh2fic7b0" path="res://Assets/World/HexMenuController.cs" id="7_h7mlw"]
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_3hdf3"]
-resource_name = "1"
-texture = ExtResource("2_uxkm3")
-separation = Vector2i(0, 5)
-texture_region_size = Vector2i(32, 28)
-0:0/0 = 0
-1:0/0 = 0
-2:0/0 = 0
-3:0/0 = 0
-3:1/0 = 0
-2:1/0 = 0
-1:1/0 = 0
-0:1/0 = 0
-0:2/0 = 0
-1:2/0 = 0
-2:2/0 = 0
-2:3/0 = 0
-1:3/0 = 0
-0:3/0 = 0
-3:3/0 = 0
-3:2/0 = 0
+[node name="World" type="Node2D" node_paths=PackedStringArray("hexGrid", "debugInfo")]
+script = ExtResource("1_2o6ge")
+hexGrid = NodePath("HexGrid")
+debugInfo = NodePath("Debug Screen/Control/Dialogue/HBoxContainer/MarginContainer/HFlowContainer/DebugInfo")
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_op1do"]
-texture = ExtResource("2_rw40b")
-separation = Vector2i(0, 5)
-texture_region_size = Vector2i(32, 27)
-0:0/0 = 0
-1:0/0 = 0
-2:0/0 = 0
-3:0/0 = 0
-0:1/0 = 0
-1:1/0 = 0
-2:1/0 = 0
-3:1/0 = 0
-0:2/0 = 0
-1:2/0 = 0
-2:2/0 = 0
-3:2/0 = 0
-0:3/0 = 0
-1:3/0 = 0
-2:3/0 = 0
-3:3/0 = 0
+[node name="HexGrid" type="Node2D" parent="." node_paths=PackedStringArray("groundLayer", "obstacleLayer", "entityLayer", "selectionLayer", "movementLayer", "targetLayer")]
+script = ExtResource("1_3p22m")
+groundLayer = NodePath("Ground")
+obstacleLayer = NodePath("Obstacle")
+entityLayer = NodePath("Entities")
+selectionLayer = NodePath("Selectors/Cursor")
+movementLayer = NodePath("Selectors/MovementSelector")
+targetLayer = NodePath("Selectors/TargetSelector")
+moveTileId = 1
+attackTileId = 2
+supportTileId = 3
 
-[sub_resource type="TileSet" id="TileSet_jfpqm"]
-tile_shape = 3
-tile_offset_axis = 1
-tile_size = Vector2i(32, 27)
-sources/0 = SubResource("TileSetAtlasSource_3hdf3")
-sources/1 = SubResource("TileSetAtlasSource_op1do")
+[node name="Ground" type="TileMapLayer" parent="HexGrid"]
+tile_map_data = PackedByteArray("AAD/////AAAEAAAAAAD//wAAAAACAAAAAAD//wEAAAAEAAAAAAD//wIAAAAEAAAAAAD//wMAAAAEAAAAAAD//wQAAAAEAAAAAAD//wUAAAAEAAAAAAD//wYAAAAEAAAAAAAAAP//AAAEAAAAAAAAAAAAAAADAAAAAAAAAAEAAAADAAAAAAAAAAIAAAAEAAAAAAAAAAMAAAAEAAAAAAAAAAQAAAAEAAAAAAAAAAUAAAAEAAAAAAAAAAYAAAAAAAEAAAABAP//AAAEAAAAAAABAAAAAAAEAAAAAAABAAEAAAAEAAAAAAABAAIAAAAEAAAAAAABAAMAAAAEAAAAAAABAAQAAAACAAAAAAABAAUAAAAEAAEAAAABAAYAAAABAAIAAAACAP//AAAEAAAAAAACAAAAAAAEAAAAAAACAAEAAAAEAAAAAAACAAIAAAAEAAAAAAACAAMAAAAEAAAAAAACAAQAAAAEAAAAAAACAAUAAAAAAAAAAAACAAYAAAAEAAAAAAADAP//AAAEAAAAAAADAAAAAAAEAAEAAAADAAEAAAAEAAAAAAADAAIAAAAEAAAAAAADAAMAAAAEAAAAAAADAAQAAAAEAAAAAAADAAUAAAAEAAAAAAADAAYAAAAEAAAAAAAEAP//AAAEAAAAAAAEAAAAAAAEAAEAAAAEAAEAAAAEAAEAAAAEAAIAAAAEAAAAAAAEAAMAAAAEAAAAAAAEAAQAAAAEAAAAAAAEAAUAAAAEAAAAAAAEAAYAAAAAAAAAAAAFAP//AAAEAAAAAAAFAAAAAAAEAAAAAAAFAAEAAAAEAAAAAAAFAAIAAAAEAAAAAAAFAAMAAAAEAAAAAAAFAAQAAAAEAAAAAAAFAAUAAAAEAAAAAAAFAAYAAAAEAAAAAAAGAP//AAAEAAAAAAAGAAAAAAABAAAAAAAGAAEAAAADAAAAAAAGAAIAAAAEAAAAAAAGAAMAAAAEAAAAAAAGAAQAAAAEAAAAAAAGAAUAAAAEAAAAAAAGAAYAAAAEAAAAAAAHAP//AAAEAAAAAAAHAAAAAAADAAAAAAAHAAEAAAAEAAAAAAAHAAIAAAAEAAAAAAAHAAMAAAABAAAAAAAHAAQAAAAEAAAAAAAHAAUAAAAEAAAAAAAHAAYAAAAEAAAAAAAIAP//AAADAAAAAAAIAAAAAAAEAAAAAAAIAAEAAAAAAAEAAAAIAAIAAAACAAIAAAAIAAMAAAAAAAAAAAAIAAQAAAAEAAAAAAAIAAUAAAAEAAAAAAAIAAYAAAAEAAAAAAAJAP//AAAAAAEAAAAJAAAAAAAEAAEAAAAJAAEAAAAEAAEAAAAJAAIAAAAEAAEAAAAJAAMAAAAEAAAAAAAJAAQAAAAEAAAAAAAJAAUAAAAAAAEAAAAJAAYAAAAEAAEAAAAKAP//AAAEAAEAAAAKAAAAAAAEAAEAAAAKAAEAAAAEAAEAAAAKAAIAAAAEAAEAAAAKAAMAAAABAAEAAAAKAAQAAAABAAAAAAAKAAUAAAAEAAEAAAAKAAYAAAAEAAEAAAALAP//AAAEAAEAAAALAAAAAAAEAAEAAAALAAEAAAAEAAEAAAALAAIAAAAEAAEAAAALAAMAAAAEAAEAAAALAAQAAAAEAAAAAAALAAUAAAABAAMAAAALAAYAAAABAAIAAAAMAP//AAAEAAAAAAAMAAAAAAAEAAEAAAAMAAEAAAAEAAEAAAAMAAIAAAABAAIAAAAMAAMAAAAEAAAAAAAMAAQAAAAEAAAAAAAMAAUAAAAEAAAAAAAMAAYAAAAAAAAAAAANAP//AAAEAAAAAAANAAAAAAAEAAEAAAANAAEAAAABAAEAAAANAAIAAAAEAAAAAAANAAMAAAACAAAAAAANAAQAAAABAAAAAAANAAUAAAACAAAAAAANAAYAAAAEAAAAAAA=")
+tile_set = ExtResource("1_0ukkx")
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_jfpqm"]
-texture = ExtResource("2_3hdf3")
-texture_region_size = Vector2i(32, 32)
-0:0/size_in_atlas = Vector2i(1, 2)
-0:0/0 = 0
+[node name="Obstacle" type="TileMapLayer" parent="HexGrid"]
+tile_map_data = PackedByteArray("AAAMAAEAAAACAAAAAAALAAAAAAACAAAAAAALAAEAAAABAAAAAAAAAAUAAAAAAAAAAAABAAMAAAAAAAAAAAAAAAMAAAAAAAAAAAA=")
+tile_set = ExtResource("4_h7mlw")
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_fdrvb"]
-texture = ExtResource("4_2o6ge")
-separation = Vector2i(0, 5)
-texture_region_size = Vector2i(32, 27)
-1:0/0 = 0
-2:0/0 = 0
-3:0/0 = 0
-0:1/0 = 0
-1:1/0 = 0
-2:1/0 = 0
-3:1/0 = 0
-0:2/0 = 0
-1:2/0 = 0
-2:2/0 = 0
-3:2/0 = 0
-0:3/0 = 0
-1:3/0 = 0
-2:3/0 = 0
-3:3/0 = 0
+[node name="Entities" type="TileMapLayer" parent="HexGrid"]
+position = Vector2(0, -8)
+tile_map_data = PackedByteArray("AAAIAAMAAQAAAAAAAAAEAAMAAAAAAAEAAAADAAEAAAAAAAAAAAADAAQAAAAAAAAAAAA=")
+tile_set = ExtResource("3_rw40b")
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_mh0j8"]
-texture = ExtResource("5_h7mlw")
-separation = Vector2i(0, 5)
-texture_region_size = Vector2i(32, 27)
-0:0/0 = 0
-1:0/0 = 0
-2:0/0 = 0
-3:0/0 = 0
-0:1/0 = 0
-1:1/0 = 0
-2:1/0 = 0
-3:1/0 = 0
-0:2/0 = 0
-1:2/0 = 0
-2:2/0 = 0
-3:2/0 = 0
-0:3/0 = 0
-1:3/0 = 0
-2:3/0 = 0
-3:3/0 = 0
+[node name="Selectors" type="Node2D" parent="HexGrid"]
 
-[sub_resource type="TileSet" id="TileSet_3hdf3"]
-tile_shape = 3
-tile_offset_axis = 1
-tile_size = Vector2i(32, 27)
-sources/0 = SubResource("TileSetAtlasSource_jfpqm")
-sources/1 = SubResource("TileSetAtlasSource_fdrvb")
-sources/2 = SubResource("TileSetAtlasSource_mh0j8")
+[node name="Cursor" type="TileMapLayer" parent="HexGrid/Selectors"]
+tile_set = ExtResource("2_3p22m")
 
-[node name="World" type="Node2D"]
+[node name="MovementSelector" type="TileMapLayer" parent="HexGrid/Selectors"]
+tile_set = ExtResource("2_3p22m")
 
-[node name="WorldLayer" type="TileMapLayer" parent="."]
-tile_map_data = PackedByteArray("AAAAAAAAAQAAAAEAAAABAP//AQAAAAEAAAABAAAAAQAAAAEAAAACAAAAAQAAAAEAAAADAAAAAQAAAAEAAAAEAAAAAQAAAAEAAAAFAAAAAQAAAAEAAAAGAAAAAQAAAAEAAAAHAAAAAQAAAAEAAAAIAAAAAQAAAAEAAAAJAP//AQAAAAIAAAAKAAAAAQAAAAIAAAALAP//AQAAAAIAAAAMAAAAAQAAAAIAAAALAAAAAQAAAAIAAAAJAAAAAQAAAAEAAAADAP//AQAAAAEAAAAFAP//AQAAAAEAAAAHAP//AQAAAAEAAAALAAEAAQAAAAEAAAAKAAEAAQAAAAEAAAAJAAEAAQABAAEAAAAIAAEAAQAAAAEAAAAHAAEAAQAAAAEAAAAGAAEAAQAAAAEAAAAFAAEAAQAAAAEAAAAEAAEAAQAAAAEAAAADAAEAAQAAAAEAAAACAAIAAQAAAAEAAAABAAEAAQAAAAEAAAAAAAIAAQAAAAEAAAAAAAEAAQAAAAEAAAABAAIAAQAAAAEAAAAAAAQAAQAAAAEAAAABAAQAAQAAAAEAAAABAAUAAQAAAAEAAAABAAYAAQAAAAEAAAABAAMAAQAAAAEAAAD//wQAAQAAAAEAAAD//wUAAQAAAAEAAAAAAAYAAQAAAAEAAAAAAAUAAQAAAAEAAAACAAYAAQAAAAEAAAACAAUAAQAAAAEAAAACAAQAAQAAAAEAAAACAAMAAQAAAAEAAAACAAEAAQAAAAEAAAADAAUAAQAAAAEAAAADAAYAAQAAAAEAAAAEAAUAAQAAAAEAAAADAAQAAQAAAAEAAAAEAAMAAQAAAAEAAAADAAIAAQAAAAEAAAAEAAIAAQABAAEAAAD//wMAAQAAAAEAAAD//wIAAQAAAAEAAAD//wEAAQAAAAEAAAD//wAAAQAAAAEAAAD/////AQAAAAEAAAAAAAMAAQAAAAEAAAAFAAIAAQABAAEAAAAEAAYAAQAAAAEAAAAFAAUAAQAAAAEAAAAGAAYAAQACAAEAAAAHAAUAAQACAAEAAAAIAAYAAQACAAEAAAAJAAUAAQACAAEAAAAKAAYAAQACAAEAAAALAAUAAQACAAEAAAAMAAYAAQAAAAEAAAAMAAUAAQACAAEAAAAMAAQAAQACAAEAAAAMAAMAAQACAAEAAAAMAAIAAQAAAAIAAAAMAAEAAQAAAAIAAAANAP//AQAAAAEAAAANAAAAAQAAAAEAAAANAAEAAQAAAAEAAAANAAIAAQACAAEAAAANAAMAAQACAAEAAAANAAQAAQACAAEAAAANAAUAAQAAAAEAAAANAAYAAQAAAAEAAAAFAAYAAQACAAEAAAAHAAYAAQACAAEAAAAJAAYAAQACAAEAAAALAAYAAQAAAAEAAAAEAAQAAQAAAAEAAAAFAAMAAQAAAAEAAAAFAAQAAQAAAAEAAAAGAAUAAQAAAAEAAAAGAAQAAQAAAAEAAAAGAAMAAQAAAAEAAAAGAAIAAQAAAAEAAAAHAAQAAQAAAAEAAAAHAAMAAQAAAAEAAAAHAAIAAQAAAAEAAAAIAAUAAQACAAEAAAAIAAQAAQAAAAEAAAAIAAMAAQAAAAEAAAAIAAIAAQAAAAEAAAAJAAMAAQAAAAEAAAAJAAIAAQAAAAEAAAAJAAQAAQACAAEAAAAKAAIAAQAAAAEAAAAKAAMAAQAAAAEAAAAKAAQAAQACAAEAAAAKAAUAAQACAAEAAAALAAQAAQACAAEAAAALAAMAAQACAAEAAAALAAIAAQAAAAEAAAD//wYAAQAAAAEAAAADAAMAAQAAAAEAAAA=")
-tile_set = SubResource("TileSet_jfpqm")
+[node name="TargetSelector" type="TileMapLayer" parent="HexGrid/Selectors"]
+tile_set = ExtResource("2_3p22m")
 
-[node name="SelectionLayer" type="TileMapLayer" parent="."]
-tile_map_data = PackedByteArray("AAAHAAQAAAACAAAAAAADAAMAAAADAAAAAAADAAIAAAABAAAAAAADAAQAAAABAAAAAAA=")
-tile_set = SubResource("TileSet_jfpqm")
-
-[node name="Entities" type="TileMapLayer" parent="."]
-position = Vector2(0, 6)
-tile_map_data = PackedByteArray("AAADAAIAAAAAAAAAAAAGAAQAAQABAAEAAAAGAAMAAQACAAEAAAAGAAIAAQAAAAEAAAADAAQAAgACAAEAAAAAAAEAAgAAAAEAAAA=")
-tile_set = SubResource("TileSet_3hdf3")
-
-[node name="Control" type="Control" parent="."]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+[node name="HexMenuController" type="Node2D" parent="."]
+script = ExtResource("7_h7mlw")
 
 [node name="Debug Screen" type="CanvasLayer" parent="."]
 visible = false
@@ -180,14 +96,7 @@ theme_override_constants/margin_right = 16
 [node name="HFlowContainer" type="HFlowContainer" parent="Debug Screen/Control/Dialogue/HBoxContainer/MarginContainer"]
 layout_mode = 2
 
-[node name="RichTextLabel" type="RichTextLabel" parent="Debug Screen/Control/Dialogue/HBoxContainer/MarginContainer/HFlowContainer"]
-custom_minimum_size = Vector2(0, 16)
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Turn:"
-scroll_active = false
-
-[node name="RichTextLabel2" type="RichTextLabel" parent="Debug Screen/Control/Dialogue/HBoxContainer/MarginContainer/HFlowContainer"]
+[node name="DebugInfo" type="RichTextLabel" parent="Debug Screen/Control/Dialogue/HBoxContainer/MarginContainer/HFlowContainer"]
 custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
 size_flags_horizontal = 3

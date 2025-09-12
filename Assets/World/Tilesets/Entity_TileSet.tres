@@ -1,0 +1,28 @@
+[gd_resource type="TileSet" load_steps=5 format=3 uid="uid://vbaxliadl1gn"]
+
+[ext_resource type="Texture2D" uid="uid://7t5na3aekxb4" path="res://Assets/World/enemies.png" id="1_flkqe"]
+[ext_resource type="Texture2D" uid="uid://bremap0b7vf64" path="res://Assets/World/florante.png" id="2_2gufn"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2gufn"]
+texture = ExtResource("1_flkqe")
+texture_region_size = Vector2i(32, 32)
+0:1/0 = 0
+1:1/0 = 0
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_n4b8c"]
+texture = ExtResource("2_2gufn")
+margins = Vector2i(0, 24)
+texture_region_size = Vector2i(32, 20)
+0:0/size_in_atlas = Vector2i(1, 2)
+0:0/0 = 0
+
+[resource]
+tile_shape = 3
+tile_offset_axis = 1
+tile_size = Vector2i(32, 27)
+sources/0 = SubResource("TileSetAtlasSource_2gufn")
+sources/1 = SubResource("TileSetAtlasSource_n4b8c")
