@@ -1,22 +1,4 @@
-// Public utility methods
-    public void SetButtonEnabled(int index, bool enabled)
-    {
-        if (index >= 0 && index < buttons.Count)
-        {
-            buttons[index].Disabled = !enabled;
-        }
-    }
-    
-    public void SetButtonVisible(int index, bool visible)
-    {
-        if (index >= 0 && index < buttons.Count)
-        {
-            buttons[index].Visible = visible;
-        }
-    }
-    
-    public int GetButtonCount() => buttons.Count;
-    public BaseButton GetButton(int index) => index >= 0 && index < buttons.Count ? buttons[index] : null;// Menu.cs - Complete menu system with InputLayerManager support
+// Menu.cs - Complete menu system with InputLayerManager support
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -723,11 +705,7 @@ public partial class Menu : Control, IInputHandler
         return button switch
         {
             Button btn => btn.Text,
-            CheckBox cb => cb.Text,
-            CheckButton chkBtn => chkBtn.Text,
             LinkButton lb => lb.Text,
-            MenuButton mb => mb.Text,
-            OptionButton ob => ob.Text,
             _ => button.Name
         };
     }
@@ -743,20 +721,8 @@ public partial class Menu : Control, IInputHandler
                 case Button btn:
                     btn.Text = text;
                     break;
-                case CheckBox cb:
-                    cb.Text = text;
-                    break;
-                case CheckButton chkBtn:
-                    chkBtn.Text = text;
-                    break;
                 case LinkButton lb:
                     lb.Text = text;
-                    break;
-                case MenuButton mb:
-                    mb.Text = text;
-                    break;
-                case OptionButton ob:
-                    ob.Text = text;
                     break;
             }
         }
