@@ -1,4 +1,22 @@
-// Menu.cs - Complete menu system with InputLayerManager support
+// Public utility methods
+    public void SetButtonEnabled(int index, bool enabled)
+    {
+        if (index >= 0 && index < buttons.Count)
+        {
+            buttons[index].Disabled = !enabled;
+        }
+    }
+    
+    public void SetButtonVisible(int index, bool visible)
+    {
+        if (index >= 0 && index < buttons.Count)
+        {
+            buttons[index].Visible = visible;
+        }
+    }
+    
+    public int GetButtonCount() => buttons.Count;
+    public BaseButton GetButton(int index) => index >= 0 && index < buttons.Count ? buttons[index] : null;// Menu.cs - Complete menu system with InputLayerManager support
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -300,7 +318,7 @@ public partial class Menu : Control, IInputHandler
                     SetupFlowContainerFocus(button, capturedIndex);
                 }
                 
-                DebugLog($"Initialized button {buttonIndex}: {button.Name} with text '{button.Text}'");
+                DebugLog($"Initialized button {buttonIndex}: {button.Name} with text '{GetButtonText(button)}'");
                 buttonIndex++;
             }
             else
@@ -694,9 +712,54 @@ public partial class Menu : Control, IInputHandler
         for (int i = 0; i < buttons.Count; i++)
         {
             var btn = buttons[i];
-            GD.Print($"  [{i}] {btn.Name} - Visible: {btn.Visible}, Disabled: {btn.Disabled}, HasFocus: {btn.HasFocus()}");
+            GD.Print($"  [{i}] {btn.Name} ({GetButtonText(btn)}) - Visible: {btn.Visible}, Disabled: {btn.Disabled}, HasFocus: {btn.HasFocus()}");
         }
         GD.Print("======================");
+    }
+
+    // Helper method to get button text safely
+    private string GetButtonText(BaseButton button)
+    {
+        return button switch
+        {
+            Button btn => btn.Text,
+            CheckBox cb => cb.Text,
+            CheckButton chkBtn => chkBtn.Text,
+            LinkButton lb => lb.Text,
+            MenuButton mb => mb.Text,
+            OptionButton ob => ob.Text,
+            _ => button.Name
+        };
+    }
+    
+    // Helper method to set button text safely
+    public void SetButtonText(int index, string text)
+    {
+        if (index >= 0 && index < buttons.Count)
+        {
+            var button = buttons[index];
+            switch (button)
+            {
+                case Button btn:
+                    btn.Text = text;
+                    break;
+                case CheckBox cb:
+                    cb.Text = text;
+                    break;
+                case CheckButton chkBtn:
+                    chkBtn.Text = text;
+                    break;
+                case LinkButton lb:
+                    lb.Text = text;
+                    break;
+                case MenuButton mb:
+                    mb.Text = text;
+                    break;
+                case OptionButton ob:
+                    ob.Text = text;
+                    break;
+            }
+        }
     }
 
     // Additional helper method for Node2D specific functionality
