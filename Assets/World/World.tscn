@@ -1,14 +1,13 @@
-[gd_scene load_steps=10 format=4 uid="uid://f2q4l46jsk8c"]
+[gd_scene load_steps=9 format=4 uid="uid://f2q4l46jsk8c"]
 
 [ext_resource type="TileSet" uid="uid://mkn6xih8ecpo" path="res://Assets/World/Tilesets/Ground_TileSet.tres" id="1_0ukkx"]
-[ext_resource type="Script" uid="uid://rt0asiw4i8ip" path="res://Assets/World/HexInputTest.cs" id="1_2o6ge"]
-[ext_resource type="Script" uid="uid://bot17no0e0dm8" path="res://Assets/World/HexGrid.cs" id="1_3p22m"]
+[ext_resource type="Script" uid="uid://rt0asiw4i8ip" path="res://Assets/Scripts/HexInputHandler.cs" id="1_2o6ge"]
+[ext_resource type="Script" uid="uid://bot17no0e0dm8" path="res://Assets/Scripts/HexGrid.cs" id="1_3p22m"]
 [ext_resource type="TileSet" uid="uid://vdekyx1aewa0" path="res://Assets/World/Tilesets/UI_TileSet.tres" id="2_3p22m"]
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="3_jfpqm"]
 [ext_resource type="TileSet" uid="uid://vbaxliadl1gn" path="res://Assets/World/Tilesets/Entity_TileSet.tres" id="3_rw40b"]
 [ext_resource type="Texture2D" uid="uid://b7mqiykktuwvt" path="res://Assets/Interface/default_cursor_down.png" id="4_0ukkx"]
 [ext_resource type="TileSet" uid="uid://h8ctwsrda6b3" path="res://Assets/World/Tilesets/Obstacle_TileSet.tres" id="4_h7mlw"]
-[ext_resource type="Script" uid="uid://b2n3lh2fic7b0" path="res://Assets/World/HexMenuController.cs" id="7_h7mlw"]
 
 [node name="World" type="Node2D" node_paths=PackedStringArray("hexGrid", "debugInfo")]
 script = ExtResource("1_2o6ge")
@@ -35,11 +34,6 @@ tile_set = ExtResource("1_0ukkx")
 tile_map_data = PackedByteArray("AAAMAAEAAAACAAAAAAALAAAAAAACAAAAAAALAAEAAAABAAAAAAAAAAUAAAAAAAAAAAABAAMAAAAAAAAAAAAAAAMAAAAAAAAAAAA=")
 tile_set = ExtResource("4_h7mlw")
 
-[node name="Entities" type="TileMapLayer" parent="HexGrid"]
-position = Vector2(0, -8)
-tile_map_data = PackedByteArray("AAAIAAMAAQAAAAAAAAAEAAMAAAAAAAEAAAADAAEAAAAAAAAAAAADAAQAAAAAAAAAAAA=")
-tile_set = ExtResource("3_rw40b")
-
 [node name="Selectors" type="Node2D" parent="HexGrid"]
 
 [node name="Cursor" type="TileMapLayer" parent="HexGrid/Selectors"]
@@ -51,8 +45,12 @@ tile_set = ExtResource("2_3p22m")
 [node name="TargetSelector" type="TileMapLayer" parent="HexGrid/Selectors"]
 tile_set = ExtResource("2_3p22m")
 
+[node name="Entities" type="TileMapLayer" parent="HexGrid"]
+position = Vector2(0, -8)
+tile_map_data = PackedByteArray("AAAIAAMAAQAAAAAAAAAEAAMAAAAAAAEAAAADAAEAAAAAAAAAAAADAAQAAAAAAAAAAAA=")
+tile_set = ExtResource("3_rw40b")
+
 [node name="HexMenuController" type="Node2D" parent="."]
-script = ExtResource("7_h7mlw")
 
 [node name="Debug Screen" type="CanvasLayer" parent="."]
 visible = false

@@ -1,15 +1,20 @@
-[gd_scene load_steps=5 format=3 uid="uid://p8ah872rpinp"]
+[gd_scene load_steps=6 format=3 uid="uid://p8ah872rpinp"]
 
 [ext_resource type="PackedScene" uid="uid://f2q4l46jsk8c" path="res://Assets/World/World.tscn" id="1_2x3n4"]
-[ext_resource type="Script" uid="uid://debskksa7afxw" path="res://Scenes/InputPriorityManager.cs" id="1_3q4bn"]
+[ext_resource type="Script" uid="uid://debskksa7afxw" path="res://Assets/Scripts/InputLayerManager.cs" id="1_3q4bn"]
 [ext_resource type="PackedScene" uid="uid://c30k8cxuia6f5" path="res://Assets/Interface/Dialogue.tscn" id="2_3q4bn"]
+[ext_resource type="Script" uid="uid://bcgngwaftswaq" path="res://Scripts/BattleController.cs" id="2_30s8j"]
 [ext_resource type="PackedScene" uid="uid://b82mukv4f8x8b" path="res://Assets/Interface/Battle.tscn" id="2_q2r2a"]
 
 [node name="TestBattle" type="Node2D"]
 position = Vector2(10, 0)
 
-[node name="InputPriority" type="Node2D" parent="."]
+[node name="InputLayerManager" type="Node2D" parent="."]
+position = Vector2(-1, -5)
 script = ExtResource("1_3q4bn")
+
+[node name="BattleController" type="Node2D" parent="."]
+script = ExtResource("2_30s8j")
 
 [node name="World" parent="." instance=ExtResource("1_2x3n4")]
 position = Vector2(0, 1)
