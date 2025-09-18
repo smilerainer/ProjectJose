@@ -76,3 +76,7 @@ layout_mode = 2
 
 [node name="PopupOptions" parent="UI/MarginContainer/MarginContainer/VBoxContainer/MarginContainer" instance=ExtResource("3_ceedc")]
 layout_mode = 2
+menuType = null
+autoFocus = null
+wrapNavigation = null
+gridColumns = null
