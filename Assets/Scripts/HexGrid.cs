@@ -1,354 +1,193 @@
-// HexGrid.cs - Node2D that manages multiple TileMapLayer children
+// HexGrid.cs - Core abstracted hex grid
 using Godot;
 using System.Collections.Generic;
-using System.Linq;
+
+public enum CellLayer
+{
+    Terrain = 0,
+    WorldMarker = 10,
+    Obstacle = 20,
+    Entity = 30,
+    Marker = 40,
+    Cursor = 50
+}
 
 public partial class HexGrid : Node2D
 {
-    // Layer assignments
-    [ExportGroup("Tilemap Layers")]
-    [Export] private TileMapLayer groundLayer; // Base terrain tiles
-    [Export] private TileMapLayer obstacleLayer; // Walls, rocks, etc
-    [Export] private TileMapLayer entityLayer; // For entity position markers (optional)
-    [Export] private TileMapLayer selectionLayer; // Yellow cursor selection
-    [Export] private TileMapLayer movementLayer; // Blue movement highlights
-    [Export] private TileMapLayer targetLayer; // Red/Green skill targeting
+    [Signal] public delegate void CellSelectedEventHandler(Vector2I cell);
     
-    [ExportGroup("Tile IDs")]
-    [Export] private int cursorTileId = 0; // Yellow cursor tile
-    [Export] private int moveTileId = 0; // Blue movement tile
-    [Export] private int attackTileId = 0; // Red attack tile
-    [Export] private int supportTileId = 0; // Green support tile
+    [Export] private TileMapLayer terrainLayer;
+    [Export] private TileMapLayer worldMarkerLayer;
+    [Export] private TileMapLayer obstacleLayer; 
+    [Export] private TileMapLayer entityLayer;
+    [Export] private TileMapLayer markerLayer;
+    [Export] private TileMapLayer cursorLayer;
     
-    [ExportGroup("Grid Settings")]
-    [Export] private int gridWidth = 15;
-    [Export] private int gridHeight = 10;
-    [Export] private bool useTileMapBounds = true; // Use actual tiles for bounds instead of fixed size
+    [Export] private bool enableMouseDebug = false;
     
-    private Dictionary<Vector2I, bool> occupiedCells = new();
-    private List<Vector2I> moveHighlights = new();
-    private List<Vector2I> targetHighlights = new();
-    private Vector2I cursorPosition = Vector2I.Zero;
-    private bool cursorVisible = false;
+    private Vector2I selectedCell = new(-999, -999);
+    private HashSet<Vector2I> occupiedCells = new();
     
-    public enum HighlightType
-    {
-        Cursor,
-        Movement,
-        Attack,
-        Support
-    }
+    public Vector2I Selected => selectedCell;
+    public bool HasSelection => selectedCell != new Vector2I(-999, -999);
     
     public override void _Ready()
     {
-        ValidateLayers();
-        GD.Print($"HexGrid ready - Managing {GetChildCount()} layers");
+        terrainLayer ??= GetNode<TileMapLayer>("Terrain");
+        worldMarkerLayer ??= GetNode<TileMapLayer>("WorldMarker");
+        obstacleLayer ??= GetNode<TileMapLayer>("Obstacle");
+        entityLayer ??= GetNode<TileMapLayer>("Entity");
+        markerLayer ??= GetNode<TileMapLayer>("Marker");
+        cursorLayer ??= GetNode<TileMapLayer>("Cursor");
     }
     
-    private void ValidateLayers()
+    public override void _Process(double delta)
     {
-        // Auto-assign layers if not set
-        if (groundLayer == null)
-            groundLayer = GetNodeOrNull<TileMapLayer>("GroundLayer");
-        if (obstacleLayer == null)
-            obstacleLayer = GetNodeOrNull<TileMapLayer>("ObstacleLayer");
-        if (entityLayer == null)
-            entityLayer = GetNodeOrNull<TileMapLayer>("EntityLayer");
-        if (selectionLayer == null)
-            selectionLayer = GetNodeOrNull<TileMapLayer>("SelectionLayer");
-        if (movementLayer == null)
-            movementLayer = GetNodeOrNull<TileMapLayer>("MovementLayer");
-        if (targetLayer == null)
-            targetLayer = GetNodeOrNull<TileMapLayer>("TargetLayer");
-            
-        // Warn about missing critical layers
-        if (groundLayer == null)
-            GD.PrintErr("Warning: No ground layer assigned!");
-        if (selectionLayer == null)
-            GD.PrintErr("Warning: No selection layer assigned!");
+        if (enableMouseDebug)
+        {
+            var mouseCell = GetMouseCell();
+            if (IsValid(mouseCell))
+                GD.Print($"[Debug] Mouse at hex: {mouseCell}");
+        }
     }
     
-    public Vector2 GetHexWorldPosition(Vector2I coord)
+    public override void _Input(InputEvent @event)
     {
-        // Use the ground layer for coordinate conversion
-        if (groundLayer != null)
-            return groundLayer.MapToLocal(coord);
-            
-        // Fallback to first available layer
-        var firstLayer = GetChild<TileMapLayer>(0);
-        return firstLayer?.MapToLocal(coord) ?? Vector2.Zero;
+        //Mouse Selector (Disable this)
+        // if (@event is InputEventMouseButton click && click.Pressed && click.ButtonIndex == MouseButton.Left)
+        // {
+        //     var cell = GetMouseCell();
+        //     if (IsValid(cell)) Select(cell);
+        // }
     }
     
-    public Vector2I GetHexFromWorld(Vector2 worldPos)
+    #region Core Interface
+    
+    public void Select(Vector2I cell)
     {
-        // Use the ground layer for coordinate conversion
-        if (groundLayer != null)
-            return groundLayer.LocalToMap(worldPos);
-            
-        // Fallback to first available layer
-        var firstLayer = GetChild<TileMapLayer>(0);
-        return firstLayer?.LocalToMap(worldPos) ?? Vector2I.Zero;
+        if (!IsValid(cell)) return;
+        selectedCell = cell;
+        cursorLayer?.Clear();
+        cursorLayer?.SetCell(cell, 0, Vector2I.Zero, 0);
+        EmitSignal(SignalName.CellSelected, cell);
     }
     
-    public List<Vector2I> GetNeighbors(Vector2I hex)
+    public void Clear()
+    {
+        selectedCell = new Vector2I(-999, -999);
+        cursorLayer?.Clear();
+    }
+    
+    public Vector2 GetPosition(Vector2I cell) => terrainLayer?.MapToLocal(cell) ?? Vector2.Zero;
+    public Vector2I GetCell(Vector2 worldPos) => terrainLayer?.LocalToMap(ToLocal(worldPos)) ?? Vector2I.Zero;
+    public Vector2I GetMouseCell() => GetCell(GetGlobalMousePosition());
+    
+    public bool IsValid(Vector2I cell) => terrainLayer?.GetCellTileData(cell) != null;
+    public bool IsWalkable(Vector2I cell) => IsValid(cell) && !IsBlocked(cell) && !IsOccupied(cell);
+    public bool IsBlocked(Vector2I cell) => obstacleLayer?.GetCellTileData(cell) != null;
+    public bool IsOccupied(Vector2I cell) => occupiedCells.Contains(cell);
+    
+    public void SetOccupied(Vector2I cell, bool occupied = true)
+    {
+        if (occupied) occupiedCells.Add(cell);
+        else occupiedCells.Remove(cell);
+    }
+    
+    public void SetTile(Vector2I cell, CellLayer layer, int tileId)
+    {
+        GetLayer(layer)?.SetCell(cell, 0, Vector2I.Zero, tileId);
+    }
+    
+    public void ClearTile(Vector2I cell, CellLayer layer)
+    {
+        GetLayer(layer)?.EraseCell(cell);
+    }
+    
+    public void Highlight(List<Vector2I> cells, int tileId)
+    {
+        cursorLayer?.Clear();
+        foreach (var cell in cells)
+        {
+            if (IsValid(cell))
+                cursorLayer?.SetCell(cell, 0, Vector2I.Zero, tileId);
+        }
+    }
+    
+    #endregion
+    
+    #region Pathfinding
+    
+    public List<Vector2I> GetNeighbors(Vector2I cell)
     {
         var neighbors = new List<Vector2I>();
-        
-        // For flat-top hexagons
-        Vector2I[] directions = {
-            new(1, 0), new(0, 1), new(-1, 1),
-            new(-1, 0), new(0, -1), new(1, -1)
-        };
+        Vector2I[] directions = { new(1, 0), new(0, 1), new(-1, 1), new(-1, 0), new(0, -1), new(1, -1) };
         
         foreach (var dir in directions)
         {
-            var neighbor = hex + dir;
-            if (IsValidHex(neighbor) && IsWalkable(neighbor))
-                neighbors.Add(neighbor);
+            var neighbor = cell + dir;
+            if (IsWalkable(neighbor)) neighbors.Add(neighbor);
         }
         return neighbors;
     }
     
-    public bool IsValidHex(Vector2I coord)
-    {
-        if (useTileMapBounds && groundLayer != null)
-        {
-            // Check if there's a ground tile at this position
-            var tileData = groundLayer.GetCellTileData(coord);
-            return tileData != null;
-        }
-        
-        // Fallback to fixed bounds
-        return coord.X >= 0 && coord.X < gridWidth && 
-               coord.Y >= 0 && coord.Y < gridHeight;
-    }
-    
-    public bool IsWalkable(Vector2I coord)
-    {
-        // Check if not blocked by obstacle
-        if (obstacleLayer != null)
-        {
-            var obstacleData = obstacleLayer.GetCellTileData(coord);
-            if (obstacleData != null)
-                return false;
-        }
-        
-        // Check if not occupied by entity
-        return !IsOccupied(coord);
-    }
-    
-    public int GetDistance(Vector2I a, Vector2I b)
-    {
-        // Convert offset to cube coordinates for accurate distance
-        var cubeA = OffsetToCube(a);
-        var cubeB = OffsetToCube(b);
-        
-        return (Mathf.Abs(cubeA.X - cubeB.X) + 
-                Mathf.Abs(cubeA.Y - cubeB.Y) + 
-                Mathf.Abs(cubeA.Z - cubeB.Z)) / 2;
-    }
-    
-    private Vector3I OffsetToCube(Vector2I offset)
-    {
-        // Odd-r offset layout (odd rows are offset right)
-        int col = offset.X;
-        int row = offset.Y;
-        int cubeX = col - (row - (row & 1)) / 2;
-        int cubeZ = row;
-        int cubeY = -cubeX - cubeZ;
-        return new Vector3I(cubeX, cubeY, cubeZ);
-    }
-    
-    // Entity occupation management
-    public void SetOccupied(Vector2I coord, bool occupied)
-    {
-        occupiedCells[coord] = occupied;
-        
-        // Optionally mark on entity layer
-        if (entityLayer != null && occupied)
-        {
-            // You can set a marker tile here if desired
-            // entityLayer.SetCell(coord, 0, Vector2I.Zero, entityMarkerTileId);
-        }
-        else if (entityLayer != null && !occupied)
-        {
-            entityLayer.EraseCell(coord);
-        }
-    }
-    
-    public bool IsOccupied(Vector2I coord)
-    {
-        return occupiedCells.GetValueOrDefault(coord, false);
-    }
-    
-    // Cursor management
-    public void ShowCursor(Vector2I coord)
-    {
-        if (selectionLayer == null) return;
-        
-        HideCursor();
-        cursorPosition = coord;
-        cursorVisible = true;
-        selectionLayer.SetCell(coord, 0, Vector2I.Zero, cursorTileId);
-    }
-    
-    public void HideCursor()
-    {
-        if (selectionLayer == null || !cursorVisible) return;
-        
-        selectionLayer.EraseCell(cursorPosition);
-        cursorVisible = false;
-    }
-    
-    public void MoveCursor(Vector2I direction)
-    {
-        var newPos = cursorPosition + direction;
-        if (IsValidHex(newPos))
-        {
-            ShowCursor(newPos);
-        }
-    }
-    
-    public Vector2I GetCursorPosition() => cursorPosition;
-    
-    // Movement highlighting
-    public void ShowMovementRange(Vector2I origin, int range)
-    {
-        ClearMovementHighlights();
-        if (movementLayer == null) return;
-        
-        // Find all reachable hexes within range
-        var reachable = GetReachableHexes(origin, range);
-        
-        foreach (var hex in reachable)
-        {
-            if (hex != origin)
-            {
-                movementLayer.SetCell(hex, 0, Vector2I.Zero, moveTileId);
-                moveHighlights.Add(hex);
-            }
-        }
-    }
-    
-    public void ClearMovementHighlights()
-    {
-        if (movementLayer == null) return;
-        
-        foreach (var hex in moveHighlights)
-        {
-            movementLayer.EraseCell(hex);
-        }
-        moveHighlights.Clear();
-    }
-    
-    // Target highlighting (for skills)
-    public void ShowTargetArea(Vector2I center, int range, HighlightType type)
-    {
-        ClearTargetHighlights();
-        if (targetLayer == null) return;
-        
-        int tileId = type == HighlightType.Attack ? attackTileId : supportTileId;
-        
-        // Get all hexes within range
-        var targets = GetHexesInRange(center, range);
-        
-        foreach (var hex in targets)
-        {
-            targetLayer.SetCell(hex, 0, Vector2I.Zero, tileId);
-            targetHighlights.Add(hex);
-        }
-    }
-    
-    public void ShowTargetLine(Vector2I origin, Vector2I direction, int range, HighlightType type)
-    {
-        ClearTargetHighlights();
-        if (targetLayer == null) return;
-        
-        int tileId = type == HighlightType.Attack ? attackTileId : supportTileId;
-        
-        // Show line of hexes in direction
-        for (int i = 1; i <= range; i++)
-        {
-            var hex = origin + (direction * i);
-            if (IsValidHex(hex))
-            {
-                targetLayer.SetCell(hex, 0, Vector2I.Zero, tileId);
-                targetHighlights.Add(hex);
-            }
-        }
-    }
-    
-    public void ClearTargetHighlights()
-    {
-        if (targetLayer == null) return;
-        
-        foreach (var hex in targetHighlights)
-        {
-            targetLayer.EraseCell(hex);
-        }
-        targetHighlights.Clear();
-    }
-    
-    public void ClearAllHighlights()
-    {
-        HideCursor();
-        ClearMovementHighlights();
-        ClearTargetHighlights();
-    }
-    
-    // Utility functions for getting hex sets
-    public List<Vector2I> GetHexesInRange(Vector2I center, int range)
-    {
-        var hexes = new List<Vector2I>();
-        
-        for (int dx = -range; dx <= range; dx++)
-        {
-            for (int dy = Mathf.Max(-range, -dx - range); dy <= Mathf.Min(range, -dx + range); dy++)
-            {
-                var hex = CubeToOffset(new Vector3I(dx, dy, -dx - dy) + OffsetToCube(center));
-                if (IsValidHex(hex))
-                    hexes.Add(hex);
-            }
-        }
-        
-        return hexes;
-    }
-    
-    public List<Vector2I> GetReachableHexes(Vector2I origin, int moveRange)
+    public List<Vector2I> GetReachable(Vector2I origin, int range)
     {
         var reachable = new List<Vector2I>();
         var visited = new HashSet<Vector2I>();
-        var frontier = new Queue<(Vector2I pos, int dist)>();
+        var queue = new Queue<(Vector2I pos, int dist)>();
         
-        frontier.Enqueue((origin, 0));
+        queue.Enqueue((origin, 0));
         visited.Add(origin);
         
-        while (frontier.Count > 0)
+        while (queue.Count > 0)
         {
-            var (current, dist) = frontier.Dequeue();
+            var (current, dist) = queue.Dequeue();
             reachable.Add(current);
             
-            if (dist < moveRange)
+            if (dist < range)
             {
                 foreach (var neighbor in GetNeighbors(current))
                 {
                     if (!visited.Contains(neighbor))
                     {
                         visited.Add(neighbor);
-                        frontier.Enqueue((neighbor, dist + 1));
+                        queue.Enqueue((neighbor, dist + 1));
                     }
                 }
             }
         }
-        
         return reachable;
     }
     
-    private Vector2I CubeToOffset(Vector3I cube)
+    public int GetDistance(Vector2I a, Vector2I b)
     {
-        int col = cube.X + (cube.Z - (cube.Z & 1)) / 2;
-        int row = cube.Z;
-        return new Vector2I(col, row);
+        var cubeA = OffsetToCube(a);
+        var cubeB = OffsetToCube(b);
+        return (Mathf.Abs(cubeA.X - cubeB.X) + Mathf.Abs(cubeA.Y - cubeB.Y) + Mathf.Abs(cubeA.Z - cubeB.Z)) / 2;
     }
+    
+    #endregion
+    
+    #region Internal
+    
+    private TileMapLayer GetLayer(CellLayer layer) => layer switch
+    {
+        CellLayer.Terrain => terrainLayer,
+        CellLayer.WorldMarker => worldMarkerLayer,
+        CellLayer.Obstacle => obstacleLayer,
+        CellLayer.Entity => entityLayer,
+        CellLayer.Marker => markerLayer,
+        CellLayer.Cursor => cursorLayer,
+        _ => null
+    };
+    
+    private Vector3I OffsetToCube(Vector2I offset)
+    {
+        int col = offset.X, row = offset.Y;
+        int x = col - (row - (row & 1)) / 2;
+        int z = row;
+        return new Vector3I(x, -x - z, z);
+    }
+    
+    #endregion
 }
-

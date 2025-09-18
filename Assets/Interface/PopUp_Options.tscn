@@ -1,9 +1,9 @@
 [gd_scene load_steps=3 format=3 uid="uid://ducsxw626vu8p"]
 
-[ext_resource type="Script" uid="uid://b4cqyr03mr1vl" path="res://Assets/Scripts/Menu.cs" id="1_2y8ds"]
+[ext_resource type="Script" uid="uid://c55dkk50pea2l" path="res://Assets/Scripts/GenericMenu.cs" id="1_2y8ds"]
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="1_i2s4e"]
 
-[node name="CanvasLayer" type="Control" node_paths=PackedStringArray("ButtonsContainer")]
+[node name="CanvasLayer" type="Control"]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 3
 anchors_preset = 15
@@ -12,7 +12,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_2y8ds")
-ButtonsContainer = NodePath("NinePatchRect/MarginContainer/PlayerOptions")
 
 [node name="NinePatchRect" type="NinePatchRect" parent="."]
 custom_minimum_size = Vector2(0, 32)
