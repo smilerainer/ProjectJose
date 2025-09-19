@@ -251,7 +251,7 @@ public partial class CentralInputManager : CanvasLayer
             if (novel.IsShowingChoices)
             {
                 // TODO: Handle choice selection when implemented
-                novel.MakeChoice(0);
+                // novel.MakeChoice(0);
             }
             else
             {

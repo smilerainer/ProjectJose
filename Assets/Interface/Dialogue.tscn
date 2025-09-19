@@ -1,8 +1,9 @@
-[gd_scene load_steps=6 format=3 uid="uid://c30k8cxuia6f5"]
+[gd_scene load_steps=7 format=3 uid="uid://c30k8cxuia6f5"]
 
 [ext_resource type="Texture2D" uid="uid://co6vswgr16eb6" path="res://Assets/Dialogue/default_border.png" id="1_he0po"]
 [ext_resource type="Texture2D" uid="uid://co0gg2oqyvckn" path="res://Assets/Dialogue/default_dialogue.png" id="1_k0cxo"]
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="1_k5f8h"]
+[ext_resource type="Script" uid="uid://cjem56bumkokh" path="res://Assets/Scripts/NovelControls.cs" id="1_s6bed"]
 [ext_resource type="Texture2D" uid="uid://dm48i7b36kj6x" path="res://Assets/Dialogue/default_background.png" id="1_xhlbx"]
 [ext_resource type="Texture2D" uid="uid://b7mqiykktuwvt" path="res://Assets/Interface/default_cursor_down.png" id="2_k0cxo"]
 
@@ -37,7 +38,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.0980392, 0.141176, 0.109804, 0.501961)
 
-[node name="SpriteEven" type="HBoxContainer" parent="Graphics"]
+[node name="Characters" type="Control" parent="Graphics"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -45,11 +46,19 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="A" type="Control" parent="Graphics/SpriteEven"]
+[node name="SpriteEven" type="HBoxContainer" parent="Graphics/Characters"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="A" type="Control" parent="Graphics/Characters/SpriteEven"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteEven/A"]
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/Characters/SpriteEven/A"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -63,11 +72,11 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="B" type="Control" parent="Graphics/SpriteEven"]
+[node name="B" type="Control" parent="Graphics/Characters/SpriteEven"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteEven/B"]
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/Characters/SpriteEven/B"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -82,11 +91,11 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="C" type="Control" parent="Graphics/SpriteEven"]
+[node name="C" type="Control" parent="Graphics/Characters/SpriteEven"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteEven/C"]
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/Characters/SpriteEven/C"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -101,11 +110,11 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="D" type="Control" parent="Graphics/SpriteEven"]
+[node name="D" type="Control" parent="Graphics/Characters/SpriteEven"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteEven/D"]
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/Characters/SpriteEven/D"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -120,7 +129,7 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="SpriteOdd" type="HBoxContainer" parent="Graphics"]
+[node name="SpriteOdd" type="HBoxContainer" parent="Graphics/Characters"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -128,11 +137,11 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="A" type="Control" parent="Graphics/SpriteOdd"]
+[node name="A" type="Control" parent="Graphics/Characters/SpriteOdd"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteOdd/A"]
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/Characters/SpriteOdd/A"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -147,11 +156,11 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="B" type="Control" parent="Graphics/SpriteOdd"]
+[node name="B" type="Control" parent="Graphics/Characters/SpriteOdd"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteOdd/B"]
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/Characters/SpriteOdd/B"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -166,11 +175,11 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="C" type="Control" parent="Graphics/SpriteOdd"]
+[node name="C" type="Control" parent="Graphics/Characters/SpriteOdd"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteOdd/C"]
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/Characters/SpriteOdd/C"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -185,15 +194,15 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="DefaultDialogue" type="Sprite2D" parent="Graphics/SpriteOdd/C"]
+[node name="DefaultDialogue" type="Sprite2D" parent="Graphics/Characters/SpriteOdd/C"]
 position = Vector2(28, 89)
 texture = ExtResource("1_k0cxo")
 
-[node name="D" type="Control" parent="Graphics/SpriteOdd"]
+[node name="D" type="Control" parent="Graphics/Characters/SpriteOdd"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteOdd/D"]
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/Characters/SpriteOdd/D"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -208,11 +217,11 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="E" type="Control" parent="Graphics/SpriteOdd"]
+[node name="E" type="Control" parent="Graphics/Characters/SpriteOdd"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/SpriteOdd/E"]
+[node name="NinePatchRect" type="NinePatchRect" parent="Graphics/Characters/SpriteOdd/E"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -306,3 +315,55 @@ scroll_active = false
 [node name="DefaultCursorDown" type="Sprite2D" parent="Text/Dialogue"]
 position = Vector2(187, 43)
 texture = ExtResource("2_k0cxo")
+
+[node name="History" type="MarginContainer" parent="Text"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Text/History"]
+layout_mode = 2
+size_flags_vertical = 3
+texture = ExtResource("1_k5f8h")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Text/History"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Text/History/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+
+[node name="RichTextLabel" type="RichTextLabel" parent="Text/History/HBoxContainer/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Salamat sa iyo, O nanasang irog,
+kung halagahan mo itong aking pagod,
+ang tula ma'y bukal ng bait na kapos,
+pakikinabangan ng ibig tumarok."
+scroll_active = false
+
+[node name="DefaultCursorDown" type="Sprite2D" parent="Text/History"]
+position = Vector2(187, 43)
+texture = ExtResource("2_k0cxo")
+
+[node name="NovelControls" type="Control" parent="." node_paths=PackedStringArray("textDisplay", "historyDisplay", "backgroundContainer", "characterContainer")]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_s6bed")
+textDisplay = NodePath("../Text/Dialogue/HBoxContainer/MarginContainer/RichTextLabel")
+historyDisplay = NodePath("../Text/History/HBoxContainer/MarginContainer/RichTextLabel")
+backgroundContainer = NodePath("../Graphics/Background")
+characterContainer = NodePath("../Graphics/Characters")

@@ -3,7 +3,7 @@
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="1_ml1pb"]
 [ext_resource type="PackedScene" uid="uid://ducsxw626vu8p" path="res://Assets/Interface/PopUp_Options.tscn" id="3_ceedc"]
 
-[node name="Battle" type="CanvasLayer"]
+[node name="BattleUI" type="CanvasLayer"]
 
 [node name="UI" type="Control" parent="."]
 layout_mode = 3
@@ -22,7 +22,6 @@ anchor_bottom = 1.0
 offset_left = -80.0
 grow_horizontal = 0
 grow_vertical = 2
-theme_override_constants/margin_right = 16
 
 [node name="NinePatchRect" type="NinePatchRect" parent="UI/MarginContainer"]
 layout_mode = 2
@@ -35,6 +34,8 @@ patch_margin_bottom = 8
 
 [node name="MarginContainer" type="MarginContainer" parent="UI/MarginContainer"]
 layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI/MarginContainer/MarginContainer"]
 custom_minimum_size = Vector2(80, 0)
@@ -42,33 +43,16 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="UI/MarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "Status Logs"
-autowrap_mode = 3
+text = "Actions
 
-[node name="Label2" type="Label" parent="UI/MarginContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "HP : 100"
-autowrap_mode = 3
 
-[node name="Label3" type="Label" parent="UI/MarginContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "SP : 100"
-autowrap_mode = 3
 
-[node name="Label4" type="Label" parent="UI/MarginContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-autowrap_mode = 3
 
-[node name="Label5" type="Label" parent="UI/MarginContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-autowrap_mode = 3
 
-[node name="Label6" type="Label" parent="UI/MarginContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-autowrap_mode = 3
 
-[node name="Label7" type="Label" parent="UI/MarginContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
+
+"
+horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="MarginContainer" type="MarginContainer" parent="UI/MarginContainer/MarginContainer/VBoxContainer"]
@@ -76,7 +60,3 @@ layout_mode = 2
 
 [node name="PopupOptions" parent="UI/MarginContainer/MarginContainer/VBoxContainer/MarginContainer" instance=ExtResource("3_ceedc")]
 layout_mode = 2
-menuType = null
-autoFocus = null
-wrapNavigation = null
-gridColumns = null

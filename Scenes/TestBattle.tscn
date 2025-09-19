@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://f2q4l46jsk8c" path="res://Assets/World/World.tscn" id="1_2x3n4"]
 [ext_resource type="Script" uid="uid://do4wfkrg47gmx" path="res://Assets/Scripts/CentralInputManager.cs" id="1_3q4bn"]
 [ext_resource type="PackedScene" uid="uid://c30k8cxuia6f5" path="res://Assets/Interface/Dialogue.tscn" id="2_3q4bn"]
-[ext_resource type="PackedScene" uid="uid://b82mukv4f8x8b" path="res://Assets/Interface/Battle.tscn" id="2_q2r2a"]
+[ext_resource type="PackedScene" uid="uid://b82mukv4f8x8b" path="res://Assets/Interface/BattleUI.tscn" id="2_q2r2a"]
 
 [node name="TestBattle" type="Node2D"]
 position = Vector2(10, 0)

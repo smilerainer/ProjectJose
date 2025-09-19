@@ -1,5 +1,6 @@
 // HexControls.cs - Simple cursor control with input handling and camera following
 using Godot;
+using System.Linq;
 
 public partial class HexControls : Node2D
 {
@@ -13,8 +14,8 @@ public partial class HexControls : Node2D
     [Export] private bool followWithCamera = true;
     [Export] private float cameraSpeed = 8f;
     [Export] private bool instantCameraMove = false;
-    [Export] private bool enableDebugHover = true; // Debug mode toggle
-    [Export] private bool enableDebugWASD = false; // Debug: WASD moves cursor/camera
+    [Export] public bool enableDebugHover = true; // Debug mode toggle
+    [Export] public bool enableDebugWASD = false; // Debug: WASD moves cursor/camera
 
     private Vector2I cursorPosition = Vector2I.Zero;  // Clicked position
     private Vector2I hoverPosition = Vector2I.Zero;   // Mouse hover position
@@ -32,13 +33,23 @@ public partial class HexControls : Node2D
 
     public override void _Input(InputEvent @event)
     {
-        // NOTE: Will be replaced by centralized InputManager when complete
+        // Skip internal input processing if CentralInputManager is handling it
+        var inputManager = GetViewport().GetChildren().OfType<CentralInputManager>().FirstOrDefault();
+        if (inputManager != null && inputManager.CurrentContext != CentralInputManager.InputContext.None)
+        {
+            // CentralInputManager is active, let it handle all input
+            return;
+        }
+        
+        // Fallback: handle input directly (for when CentralInputManager is not present)
         if (!isActive) return;
 
-        HandleKeyboardInput(@event);
-        HandleMouseInput(@event);
+        HandleKeyboardInputInternal(@event);
+        HandleMouseInputInternal(@event);
     }
-    #region API
+
+    #region Public API
+    
     public void SetActive(bool active)
     {
         isActive = active;
@@ -61,14 +72,79 @@ public partial class HexControls : Node2D
 
     public Vector2 GetCursorWorldPosition() => HexToWorld(cursorPosition);
 
-    private void HandleKeyboardInput(InputEvent @event)
+    public Vector2I WorldToHex(Vector2 globalMousePos)
+    {
+        if (cursorLayer == null || camera == null) return Vector2I.Zero;
+
+        // Convert mouse position to world coordinates accounting for camera position
+        var viewport = GetViewport();
+        var viewportSize = viewport.GetVisibleRect().Size;
+
+        // Convert viewport mouse position to world position accounting for camera
+        var worldPos = camera.GlobalPosition + (globalMousePos - viewportSize * 0.5f);
+
+        // Convert world position to hex coordinates using the cursor layer
+        var localPos = cursorLayer.ToLocal(worldPos);
+        var hexCoord = cursorLayer.LocalToMap(localPos);
+
+        return hexCoord;
+    }
+
+    public void HandleKeyboardInput(InputEvent @event)
+    {
+        if (@event is InputEventKey keyEvent && keyEvent.Pressed)
+        {
+            Vector2I direction = Vector2I.Zero;
+
+            switch (keyEvent.Keycode)
+            {
+                case Key.W: direction = new Vector2I(0, -1); break;
+                case Key.S: direction = new Vector2I(0, 1); break;
+                case Key.A: direction = new Vector2I(-1, 0); break;
+                case Key.D: direction = new Vector2I(1, 0); break;
+                case Key.Space: ActivateCursor(); return;
+            }
+
+            if (direction != Vector2I.Zero)
+            {
+                var newPos = cursorPosition + direction;
+                MoveCursor(newPos);
+            }
+        }
+    }
+
+    public void HandleMouseInput(InputEvent @event)
+    {
+        if (@event is InputEventMouseButton mouseButton)
+        {
+            if (mouseButton.Pressed && mouseButton.ButtonIndex == MouseButton.Left)
+            {
+                var coord = WorldToHex(mouseButton.GlobalPosition);
+                MoveCursor(coord);
+            }
+        }
+        else if (@event is InputEventMouseMotion mouseMotion && enableDebugHover)
+        {
+            var coord = WorldToHex(mouseMotion.GlobalPosition);
+            if (coord != hoverPosition)
+            {
+                hoverPosition = coord;
+                UpdateCursorVisual();
+            }
+        }
+    }
+
+    #endregion
+
+    #region Internal Implementation
+
+    private void HandleKeyboardInputInternal(InputEvent @event)
     {
         // Debug WASD camera movement (only if enabled)
         if (!enableDebugWASD) return;
 
         Vector2I direction = Vector2I.Zero;
 
-        // Check for WASD key presses directly
         if (@event is InputEventKey keyEvent && keyEvent.Pressed)
         {
             switch (keyEvent.Keycode)
@@ -102,9 +178,8 @@ public partial class HexControls : Node2D
             MoveCursor(newPos);
         }
     }
-    #endregion
-    #region Internal
-    private void HandleMouseInput(InputEvent @event)
+
+    private void HandleMouseInputInternal(InputEvent @event)
     {
         if (@event is InputEventMouseButton mouseButton)
         {
@@ -164,13 +239,9 @@ public partial class HexControls : Node2D
         var cursorWorldPos = HexToWorld(cursorPosition);
         var targetGlobalPos = ToGlobal(cursorWorldPos);
 
-        GD.Print($"[HexControls] UpdateCamera: Cursor {cursorPosition} -> World {cursorWorldPos} -> Target {targetGlobalPos}");
-        GD.Print($"[HexControls] Camera moving from {camera.GlobalPosition} to {targetGlobalPos}");
-
         if (instantCameraMove)
         {
             camera.GlobalPosition = targetGlobalPos;
-            GD.Print($"[HexControls] Camera instantly moved to {camera.GlobalPosition}");
         }
         else
         {
@@ -205,27 +276,5 @@ public partial class HexControls : Node2D
         return cursorLayer.MapToLocal(hexCoord);
     }
 
-    private Vector2I WorldToHex(Vector2 globalMousePos)
-    {
-        if (cursorLayer == null || camera == null) return Vector2I.Zero;
-
-        // Convert mouse position to world coordinates accounting for camera position
-        // Get the mouse position relative to the camera's view
-        var viewport = GetViewport();
-        var viewportSize = viewport.GetVisibleRect().Size;
-        var mouseInViewport = globalMousePos;
-
-        // Convert viewport mouse position to world position accounting for camera
-        var worldPos = camera.GlobalPosition + (mouseInViewport - viewportSize * 0.5f);
-
-        // Convert world position to hex coordinates using the cursor layer
-        var localPos = cursorLayer.ToLocal(worldPos);
-        var hexCoord = cursorLayer.LocalToMap(localPos);
-
-        GD.Print($"[HexControls] Mouse {globalMousePos} -> World {worldPos} -> Local {localPos} -> Hex {hexCoord}");
-        GD.Print($"[HexControls] Camera at {camera.GlobalPosition}");
-
-        return hexCoord;
-    }
     #endregion
 }
