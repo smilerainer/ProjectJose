@@ -1,4 +1,4 @@
-// HexGrid.cs - Core abstracted hex grid
+// HexGrid.cs - Core abstracted hex grid with corrected vertical offset directions
 using Godot;
 using System.Collections.Generic;
 
@@ -99,7 +99,8 @@ public partial class HexGrid : Node2D
                 cursorLayer?.SetCell(cell, 0, Vector2I.Zero, tileId);
         }
     }
-        public void SetTile(Vector2I cell, CellLayer layer, int tileId)
+    
+    public void SetTile(Vector2I cell, CellLayer layer, int tileId)
     {
         GetLayer(layer)?.SetCell(cell, 0, Vector2I.Zero, tileId);
     }
@@ -116,13 +117,39 @@ public partial class HexGrid : Node2D
     public List<Vector2I> GetNeighbors(Vector2I cell)
     {
         var neighbors = new List<Vector2I>();
-        Vector2I[] directions = { new(1, 0), new(0, 1), new(-1, 1), new(-1, 0), new(0, -1), new(1, -1) };
+        
+        // Fixed for VERTICAL offset hex coordinates
+        // Even columns (X % 2 == 0): hexes are shifted up
+        // Odd columns (X % 2 == 1): hexes are shifted down
+        
+        Vector2I[] evenColDirections = { 
+            new(0, -1),  // N
+            new(1, -1),  // NE
+            new(1, 0),   // SE  
+            new(0, 1),   // S
+            new(-1, 0),  // SW
+            new(-1, -1)  // NW
+        };
+        
+        Vector2I[] oddColDirections = { 
+            new(0, -1),  // N
+            new(1, 0),   // NE
+            new(1, 1),   // SE
+            new(0, 1),   // S
+            new(-1, 1),  // SW
+            new(-1, 0)   // NW
+        };
+
+        // Check column parity for vertical offset
+        bool isEvenCol = cell.X % 2 == 0;
+        Vector2I[] directions = isEvenCol ? evenColDirections : oddColDirections;
 
         foreach (var dir in directions)
         {
             var neighbor = cell + dir;
             if (IsWalkable(neighbor)) neighbors.Add(neighbor);
         }
+        
         return neighbors;
     }
 
@@ -187,40 +214,39 @@ public partial class HexGrid : Node2D
 
     #endregion
     
-
-   private void TestAllTileIDs()
-{
-    var testPos = new Vector2I(0, 0);
-    
-    GD.Print("=== Testing TileSet Sources ===");
-    
-    // Check what's actually in the TileSet
-    if (markerLayer?.TileSet != null)
+    private void TestAllTileIDs()
     {
-        var tileSet = markerLayer.TileSet;
-        GD.Print($"TileSet has {tileSet.GetSourceCount()} sources");
+        var testPos = new Vector2I(0, 0);
         
-        for (int sourceId = 0; sourceId < tileSet.GetSourceCount(); sourceId++)
+        GD.Print("=== Testing TileSet Sources ===");
+        
+        // Check what's actually in the TileSet
+        if (markerLayer?.TileSet != null)
         {
-            var source = tileSet.GetSource(sourceId);
-            GD.Print($"Source {sourceId}: {source.GetType().Name}");
+            var tileSet = markerLayer.TileSet;
+            GD.Print($"TileSet has {tileSet.GetSourceCount()} sources");
             
-            if (source is TileSetAtlasSource atlasSource)
+            for (int sourceId = 0; sourceId < tileSet.GetSourceCount(); sourceId++)
             {
-                GD.Print($"Atlas source has {atlasSource.GetTilesCount()} tiles");
+                var source = tileSet.GetSource(sourceId);
+                GD.Print($"Source {sourceId}: {source.GetType().Name}");
                 
-                // Try to get tile coordinates
-                for (int i = 0; i < atlasSource.GetTilesCount(); i++)
+                if (source is TileSetAtlasSource atlasSource)
                 {
-                    var tileCoords = atlasSource.GetTileId(i);
-                    GD.Print($"Tile {i}: coords {tileCoords}");
+                    GD.Print($"Atlas source has {atlasSource.GetTilesCount()} tiles");
                     
-                    // Test setting this tile
-                    markerLayer.SetCell(testPos, sourceId, tileCoords, 0);
-                    GD.Print($"Set tile at source {sourceId}, coords {tileCoords}");
+                    // Try to get tile coordinates
+                    for (int i = 0; i < atlasSource.GetTilesCount(); i++)
+                    {
+                        var tileCoords = atlasSource.GetTileId(i);
+                        GD.Print($"Tile {i}: coords {tileCoords}");
+                        
+                        // Test setting this tile
+                        markerLayer.SetCell(testPos, sourceId, tileCoords, 0);
+                        GD.Print($"Set tile at source {sourceId}, coords {tileCoords}");
+                    }
                 }
             }
         }
     }
-}
 }

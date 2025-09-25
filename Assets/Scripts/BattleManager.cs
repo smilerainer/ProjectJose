@@ -143,22 +143,17 @@ public partial class BattleManager : Node
     private HashSet<Vector2I> GetAdjacentWalkableTiles(Vector2I center)
     {
         var adjacent = new HashSet<Vector2I>();
-        var neighbors = GetHexNeighbors(center);
         
-        GD.Print($"[Battle] Checking walkability for {neighbors.Count} neighbors of {center}:");
+        // Use HexGrid's corrected GetNeighbors method instead of our own
+        var neighbors = hexGrid.GetNeighbors(center);
+        
+        GD.Print($"[Battle] Using HexGrid.GetNeighbors for {center}, found {neighbors.Count} walkable neighbors");
         foreach (var neighbor in neighbors)
         {
-            bool isValid = hexGrid.IsValid(neighbor);
-            bool isWalkable = hexGrid.IsWalkable(neighbor);
-            GD.Print($"[Battle]   {neighbor}: Valid={isValid}, Walkable={isWalkable}");
-            
-            if (isValid && isWalkable)
-            {
-                adjacent.Add(neighbor);
-            }
+            GD.Print($"[Battle] Walkable neighbor: {neighbor}");
+            adjacent.Add(neighbor);
         }
         
-        GD.Print($"[Battle] Final walkable neighbors: [{string.Join(", ", adjacent)}]");
         return adjacent;
     }
     
