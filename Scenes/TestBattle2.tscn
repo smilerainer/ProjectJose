@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://bk6idb5cfptin"]
+[gd_scene load_steps=6 format=3 uid="uid://bk6idb5cfptin"]
 
 [ext_resource type="Script" uid="uid://dnpcp2rry7ahc" path="res://Assets/Scripts/BattleManager.cs" id="1_kei0r"]
 [ext_resource type="PackedScene" uid="uid://f2q4l46jsk8c" path="res://Assets/World/World.tscn" id="2_n21b5"]
+[ext_resource type="Texture2D" uid="uid://b7mqiykktuwvt" path="res://Assets/Interface/default_cursor_down.png" id="3_ad07i"]
 [ext_resource type="Script" uid="uid://b6balrd0xxohw" path="res://Assets/Scripts/CentralInputManager.cs" id="3_arbkf"]
 [ext_resource type="PackedScene" uid="uid://ducsxw626vu8p" path="res://Assets/Interface/MenuActions.tscn" id="3_kei0r"]
 
@@ -10,7 +11,9 @@
 [node name="HexGrid" parent="." instance=ExtResource("2_n21b5")]
 
 [node name="CentralInputManager" type="Node2D" parent="."]
+scale = Vector2(2.94759, 1.28409)
 script = ExtResource("3_arbkf")
+cursorTexture = ExtResource("3_ad07i")
 
 [node name="BattleManager" type="Node2D" parent="."]
 script = ExtResource("1_kei0r")
@@ -20,5 +23,10 @@ script = ExtResource("1_kei0r")
 [node name="MenuActions" parent="UI" groups=["ui"] instance=ExtResource("3_kei0r")]
 anchors_preset = 12
 anchor_top = 1.0
-offset_top = -32.0
+offset_left = 112.0
+offset_top = -62.0
+offset_right = -106.0
+offset_bottom = -30.0
 grow_vertical = 0
+
+[node name="CodeTest" type="Node2D" parent="."]
