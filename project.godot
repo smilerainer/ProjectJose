@@ -12,6 +12,7 @@ config_version=5
 
 config/name="test6"
 config/tags=PackedStringArray("game", "thesis")
+run/main_scene="uid://bk6idb5cfptin"
 config/features=PackedStringArray("4.4", "C#", "Mobile")
 config/icon="res://icon.svg"
 

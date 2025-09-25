@@ -51,16 +51,6 @@ public partial class HexGrid : Node2D
         }
     }
     
-    public override void _Input(InputEvent @event)
-    {
-        //Mouse Selector (Disable this)
-        // if (@event is InputEventMouseButton click && click.Pressed && click.ButtonIndex == MouseButton.Left)
-        // {
-        //     var cell = GetMouseCell();
-        //     if (IsValid(cell)) Select(cell);
-        // }
-    }
-    
     #region Core Interface
     
     public void Select(Vector2I cell)

@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3 uid="uid://bk6idb5cfptin"]
+
+[ext_resource type="PackedScene" uid="uid://f2q4l46jsk8c" path="res://Assets/World/World.tscn" id="2_n21b5"]
+[ext_resource type="Script" uid="uid://do4wfkrg47gmx" path="res://Assets/Scripts/CentralInputManager.cs" id="3_arbkf"]
+[ext_resource type="PackedScene" uid="uid://ducsxw626vu8p" path="res://Assets/Interface/MenuActions.tscn" id="3_kei0r"]
+
+[node name="TestBattle2" type="Node2D"]
+
+[node name="HexGrid" parent="." instance=ExtResource("2_n21b5")]
+
+[node name="InputLayerManager" type="Node2D" parent="."]
+script = ExtResource("3_arbkf")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="CanvasLayer" parent="UI" instance=ExtResource("3_kei0r")]
+anchors_preset = 12
+anchor_top = 1.0
+offset_left = 143.0
+offset_top = -41.0
+offset_right = -2.0
+offset_bottom = -9.0
+grow_vertical = 0

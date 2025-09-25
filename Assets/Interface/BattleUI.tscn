@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://b82mukv4f8x8b"]
 
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="1_ml1pb"]
-[ext_resource type="PackedScene" uid="uid://ducsxw626vu8p" path="res://Assets/Interface/PopUp_Options.tscn" id="3_ceedc"]
+[ext_resource type="PackedScene" uid="uid://ducsxw626vu8p" path="res://Assets/Interface/MenuActions.tscn" id="3_ceedc"]
 
 [node name="BattleUI" type="CanvasLayer"]
 

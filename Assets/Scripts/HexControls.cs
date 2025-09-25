@@ -4,6 +4,7 @@ using System.Linq;
 
 public partial class HexControls : Node2D
 {
+    [Export] private Control uiMenuNode; 
     [Signal] public delegate void CursorMovedEventHandler(Vector2I coord);
     [Signal] public delegate void CursorActivatedEventHandler(Vector2I coord);
 
@@ -16,6 +17,7 @@ public partial class HexControls : Node2D
     [Export] private bool instantCameraMove = false;
     [Export] public bool enableDebugHover = true; // Debug mode toggle
     [Export] public bool enableDebugWASD = false; // Debug: WASD moves cursor/camera
+    [Export] public bool enableCoordinatePrinting = false; // Debug: Print coordinates
 
     private Vector2I cursorPosition = Vector2I.Zero;  // Clicked position
     private Vector2I hoverPosition = Vector2I.Zero;   // Mouse hover position
@@ -114,25 +116,34 @@ public partial class HexControls : Node2D
     }
 
     public void HandleMouseInput(InputEvent @event)
+{
+    if (@event is InputEventMouseButton mouseButton)
     {
-        if (@event is InputEventMouseButton mouseButton)
+        if (mouseButton.Pressed && mouseButton.ButtonIndex == MouseButton.Left)
         {
-            if (mouseButton.Pressed && mouseButton.ButtonIndex == MouseButton.Left)
+            if (enableCoordinatePrinting)
+                GD.Print($"[HexControls] Processing click at {mouseButton.GlobalPosition}");
+            
+            // Debug the UI node state
+            if (uiMenuNode != null)
             {
-                var coord = WorldToHex(mouseButton.GlobalPosition);
-                MoveCursor(coord);
+                var rect = uiMenuNode.GetGlobalRect();
+                var isOver = rect.HasPoint(mouseButton.GlobalPosition);
+                GD.Print($"[HexControls] UI rect: {rect}, Mouse over UI: {isOver}, UI visible: {uiMenuNode.Visible}");
+                
+                if (uiMenuNode.Visible && isOver)
+                {
+                    GD.Print("[HexControls] BLOCKING click due to UI");
+                    return;
+                }
             }
-        }
-        else if (@event is InputEventMouseMotion mouseMotion && enableDebugHover)
-        {
-            var coord = WorldToHex(mouseMotion.GlobalPosition);
-            if (coord != hoverPosition)
-            {
-                hoverPosition = coord;
-                UpdateCursorVisual();
-            }
+            
+            var coord = WorldToHex(mouseButton.GlobalPosition);
+            GD.Print($"[HexControls] Processing hex click -> {coord}");
+            MoveCursor(coord);
         }
     }
+}
 
     #endregion
 
@@ -185,23 +196,46 @@ public partial class HexControls : Node2D
         {
             if (mouseButton.Pressed && mouseButton.ButtonIndex == MouseButton.Left)
             {
+                // Check if mouse is over UI
+                var uiMenu = uiMenuNode;
+                if (uiMenu is Control control && control.Visible)
+                {
+                    var rect = control.GetGlobalRect();
+                    if (rect.HasPoint(mouseButton.GlobalPosition))
+                    {
+                        if (enableCoordinatePrinting)
+                            GD.Print($"[HexControls] Click blocked by UI at {mouseButton.GlobalPosition}");
+                        return; // Block input
+                    }
+                }
+                
                 var coord = WorldToHex(mouseButton.GlobalPosition);
-                GD.Print($"[HexControls] Click: GlobalPos {mouseButton.GlobalPosition} -> Hex {coord}");
+                if (enableCoordinatePrinting)
+                    GD.Print($"[HexControls] Click: GlobalPos {mouseButton.GlobalPosition} -> Hex {coord}");
                 MoveCursor(coord);
             }
         }
         else if (@event is InputEventMouseMotion mouseMotion && enableDebugHover)
         {
+            // Same UI check for hover
+            var uiMenu = uiMenuNode;
+            if (uiMenu is Control control && control.Visible)
+            {
+                var rect = control.GetGlobalRect();
+                if (rect.HasPoint(mouseMotion.GlobalPosition))
+                    return;
+            }
+            
             var coord = WorldToHex(mouseMotion.GlobalPosition);
             if (coord != hoverPosition)
             {
-                GD.Print($"[HexControls] Hover: GlobalPos {mouseMotion.GlobalPosition} -> Hex {coord}");
+                if (enableCoordinatePrinting)
+                    GD.Print($"[HexControls] Hover: GlobalPos {mouseMotion.GlobalPosition} -> Hex {coord}");
                 hoverPosition = coord;
                 UpdateCursorVisual();
             }
         }
     }
-
     private void ActivateCursor()
     {
         EmitSignal(SignalName.CursorActivated, cursorPosition);

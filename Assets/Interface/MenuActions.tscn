@@ -1,0 +1,77 @@
+[gd_scene load_steps=3 format=3 uid="uid://ducsxw626vu8p"]
+
+[ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="1_cangj"]
+[ext_resource type="Script" uid="uid://wg6uugbtbefy" path="res://Assets/Scripts/MenuControls.cs" id="2_104n5"]
+
+[node name="CanvasLayer" type="Control"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="UI" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
+
+[node name="9patch" type="NinePatchRect" parent="UI"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 0
+texture = ExtResource("1_cangj")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI" node_paths=PackedStringArray("buttonContainer")]
+layout_mode = 2
+script = ExtResource("2_104n5")
+buttonContainer = NodePath(".")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/VBoxContainer"]
+layout_mode = 2
+
+[node name="Button" type="Button" parent="UI/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+size_flags_horizontal = 6
+size_flags_vertical = 4
+text = "Move"
+
+[node name="Button2" type="Button" parent="UI/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+size_flags_horizontal = 6
+size_flags_vertical = 4
+text = "Skill
+"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="UI/VBoxContainer"]
+layout_mode = 2
+
+[node name="Button3" type="Button" parent="UI/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+size_flags_horizontal = 6
+size_flags_vertical = 4
+text = "Item"
+
+[node name="Button4" type="Button" parent="UI/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+size_flags_horizontal = 6
+size_flags_vertical = 4
+text = "Talk
+"

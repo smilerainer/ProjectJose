@@ -1,10 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://p8ah872rpinp"]
+[gd_scene load_steps=6 format=3 uid="uid://dfef0kj8txpu3"]
 
 [ext_resource type="PackedScene" uid="uid://f2q4l46jsk8c" path="res://Assets/World/World.tscn" id="1_2x3n4"]
 [ext_resource type="Script" uid="uid://do4wfkrg47gmx" path="res://Assets/Scripts/CentralInputManager.cs" id="1_3q4bn"]
 [ext_resource type="PackedScene" uid="uid://c30k8cxuia6f5" path="res://Assets/Interface/Dialogue.tscn" id="2_3q4bn"]
 [ext_resource type="PackedScene" uid="uid://b82mukv4f8x8b" path="res://Assets/Interface/BattleUI.tscn" id="2_q2r2a"]
-[ext_resource type="Script" uid="uid://bcqamjvjuixcl" path="res://Assets/Scripts/BattleIntegration.cs" id="3_30s8j"]
+[ext_resource type="Script" path="res://Assets/Scripts/BattleIntegration.cs" id="3_30s8j"]
 
 [node name="TestBattle" type="Node2D"]
 position = Vector2(10, 0)
@@ -17,6 +17,9 @@ position = Vector2(0, 1)
 
 [node name="BattleIntegration" type="Node2D" parent="."]
 script = ExtResource("3_30s8j")
+hexGridPath = NodePath("../World")
+inputManagerPath = NodePath("../CentralInputManager")
+infoDisplayPath = NodePath("../UI/Battle")
 
 [node name="UI" type="Control" parent="."]
 layout_mode = 3

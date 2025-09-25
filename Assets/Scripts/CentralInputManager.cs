@@ -3,7 +3,7 @@ using Godot;
 using System.Collections.Generic;
 using System.Linq;
 
-public partial class CentralInputManager : CanvasLayer
+public partial class CentralInputManager : Node2D
 {
     public enum InputContext
     {
