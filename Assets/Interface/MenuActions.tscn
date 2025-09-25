@@ -35,10 +35,9 @@ patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
 
-[node name="VBoxContainer" type="VBoxContainer" parent="UI" node_paths=PackedStringArray("buttonContainer")]
+[node name="VBoxContainer" type="VBoxContainer" parent="UI"]
 layout_mode = 2
 script = ExtResource("2_104n5")
-buttonContainer = NodePath(".")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="UI/VBoxContainer"]
 layout_mode = 2

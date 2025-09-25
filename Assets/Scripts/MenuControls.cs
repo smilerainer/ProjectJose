@@ -10,25 +10,25 @@ public partial class MenuControls : Control
     [Signal] public delegate void MenuActivatedEventHandler();
     [Signal] public delegate void MenuDeactivatedEventHandler();
     
-    [Export] private Container buttonContainer;
     [Export] private bool wrapNavigation = true;
     [Export] private bool autoActivateOnShow = true;
     
+    private Container buttonContainer;
     private List<BaseButton> buttons = new();
     private int currentIndex = 0;
     private bool isActive = false;
     
     public int CurrentIndex => currentIndex;
     public bool IsActive => isActive;
-    public BaseButton CurrentButton => buttons.Count > 0 ? buttons[currentIndex] : null;
+    public BaseButton CurrentButton => buttons.Count > 0 && IsValidIndex(currentIndex) ? buttons[currentIndex] : null;
     public Vector2 CurrentButtonPosition => CurrentButton?.GlobalPosition ?? Vector2.Zero;
-    
-    #region Public API
     
     public override void _Ready()
     {
         InitializeMenu();
     }
+    
+    #region Public API
     
     public void SetActive(bool active)
     {
@@ -46,25 +46,29 @@ public partial class MenuControls : Control
     {
         if (!isActive || buttons.Count == 0) return;
         
+        int newIndex = currentIndex;
+        
         if (direction.Y != 0)
-            NavigateVertically(direction.Y);
+            newIndex = CalculateNavigation(direction.Y);
         else if (direction.X != 0)
-            NavigateHorizontally(direction.X);
+            newIndex = CalculateNavigation(direction.X);
+        
+        if (newIndex != currentIndex)
+            ApplySelection(newIndex);
     }
     
     public void ActivateCurrentButton()
     {
-        if (!isActive || !IsValidSelection()) return;
+        if (!IsValidSelection()) return;
         
         var button = buttons[currentIndex];
-        TriggerButton(button);
+        button.EmitSignal(BaseButton.SignalName.Pressed);
         EmitSignal(SignalName.ButtonActivated, currentIndex, button);
     }
     
     public void SelectButton(int index)
     {
         if (!isActive || !IsValidIndex(index)) return;
-        
         ApplySelection(index);
     }
     
@@ -76,21 +80,24 @@ public partial class MenuControls : Control
     
     #endregion
     
-    #region Menu Management
+    #region Internal Implementation
     
     private void InitializeMenu()
     {
         FindButtonContainer();
         DiscoverButtons();
-        SetupInitialState();
+        
+        currentIndex = 0;
+        isActive = false;
+        
+        if (autoActivateOnShow && Visible)
+            SetActive(true);
     }
     
     private void FindButtonContainer()
     {
-        if (buttonContainer != null) return;
-        
-        // Try common container names
-        var candidates = new[] { "ButtonContainer", "Buttons", "VBoxContainer", "HBoxContainer", "FlowContainer" };
+        // Try common container names first
+        var candidates = new[] { "VBoxContainer", "HBoxContainer", "ButtonContainer", "Buttons", "FlowContainer" };
         
         foreach (var name in candidates)
         {
@@ -102,7 +109,9 @@ public partial class MenuControls : Control
         buttonContainer = GetChildren().OfType<Container>().FirstOrDefault();
         
         if (buttonContainer == null)
+        {
             GD.PrintErr($"[MenuControls] No button container found in {Name}");
+        }
     }
     
     private void DiscoverButtons()
@@ -111,12 +120,13 @@ public partial class MenuControls : Control
         
         if (buttonContainer == null) return;
         
-        CollectButtonsRecursively(buttonContainer);
+        CollectButtons(buttonContainer);
         
-        GD.Print($"[MenuControls] Found {buttons.Count} buttons in {Name}");
+        if (buttons.Count == 0)
+            GD.PrintErr($"[MenuControls] No buttons found in {Name}");
     }
     
-    private void CollectButtonsRecursively(Node parent)
+    private void CollectButtons(Node parent)
     {
         foreach (Node child in parent.GetChildren())
         {
@@ -126,64 +136,38 @@ public partial class MenuControls : Control
             }
             else if (child.GetChildCount() > 0)
             {
-                CollectButtonsRecursively(child);
+                CollectButtons(child);
             }
         }
-    }
-    
-    private void SetupInitialState()
-    {
-        currentIndex = 0;
-        isActive = false;
-        
-        if (autoActivateOnShow && Visible)
-            SetActive(true);
     }
     
     private void ActivateMenu()
     {
         if (buttons.Count > 0)
         {
-            ApplySelection(0);
+            ValidateCurrentSelection();
+            ApplySelection(currentIndex);
         }
         
         EmitSignal(SignalName.MenuActivated);
-        GD.Print($"[MenuControls] Activated menu: {Name}");
     }
     
     private void DeactivateMenu()
     {
         ClearAllButtonFocus();
         EmitSignal(SignalName.MenuDeactivated);
-        GD.Print($"[MenuControls] Deactivated menu: {Name}");
     }
     
-    #endregion
-    
-    #region Navigation Logic
-    
-    private void NavigateVertically(int direction)
+    private int CalculateNavigation(int direction)
     {
-        var newIndex = CalculateVerticalNavigation(direction);
-        if (newIndex != currentIndex)
-            ApplySelection(newIndex);
-    }
-    
-    private void NavigateHorizontally(int direction)
-    {
-        var newIndex = CalculateHorizontalNavigation(direction);
-        if (newIndex != currentIndex)
-            ApplySelection(newIndex);
-    }
-    
-    private int CalculateVerticalNavigation(int direction)
-    {
-        var targetIndex = currentIndex + direction;
+        int targetIndex = currentIndex + direction;
         
         if (wrapNavigation)
         {
-            if (targetIndex < 0) targetIndex = buttons.Count - 1;
-            else if (targetIndex >= buttons.Count) targetIndex = 0;
+            if (targetIndex < 0) 
+                targetIndex = buttons.Count - 1;
+            else if (targetIndex >= buttons.Count) 
+                targetIndex = 0;
         }
         else
         {
@@ -193,29 +177,24 @@ public partial class MenuControls : Control
         return FindNextValidButton(targetIndex, direction);
     }
     
-    private int CalculateHorizontalNavigation(int direction)
-    {
-        // For now, treat horizontal as vertical navigation
-        // Could be extended for grid-like layouts
-        return CalculateVerticalNavigation(direction);
-    }
-    
     private int FindNextValidButton(int startIndex, int direction)
     {
-        var attempts = 0;
-        var index = startIndex;
+        int attempts = 0;
+        int index = startIndex;
         
         while (attempts < buttons.Count)
         {
-            if (IsValidIndex(index) && buttons[index].Visible && !buttons[index].Disabled)
+            if (IsValidButtonAtIndex(index))
                 return index;
             
             index += direction > 0 ? 1 : -1;
             
             if (wrapNavigation)
             {
-                if (index < 0) index = buttons.Count - 1;
-                else if (index >= buttons.Count) index = 0;
+                if (index < 0) 
+                    index = buttons.Count - 1;
+                else if (index >= buttons.Count) 
+                    index = 0;
             }
             else
             {
@@ -241,29 +220,17 @@ public partial class MenuControls : Control
         EmitSignal(SignalName.ButtonSelected, currentIndex, selectedButton);
     }
     
-    #endregion
-    
-    #region Button Operations
-    
-    private void TriggerButton(BaseButton button)
-    {
-        // Simulate button press
-        button.EmitSignal(BaseButton.SignalName.Pressed);
-    }
-    
     private void ClearAllButtonFocus()
     {
         foreach (var button in buttons)
         {
-            button.ReleaseFocus();
+            button?.ReleaseFocus();
         }
     }
     
     private bool IsValidSelection()
     {
-        return IsValidIndex(currentIndex) && 
-               buttons[currentIndex].Visible && 
-               !buttons[currentIndex].Disabled;
+        return isActive && IsValidButtonAtIndex(currentIndex);
     }
     
     private bool IsValidIndex(int index)
@@ -271,16 +238,19 @@ public partial class MenuControls : Control
         return index >= 0 && index < buttons.Count;
     }
     
+    private bool IsValidButtonAtIndex(int index)
+    {
+        return IsValidIndex(index) && buttons[index].Visible && !buttons[index].Disabled;
+    }
+    
     private void ValidateCurrentSelection()
     {
-        if (!IsValidIndex(currentIndex) || 
-            !buttons[currentIndex].Visible || 
-            buttons[currentIndex].Disabled)
+        if (!IsValidButtonAtIndex(currentIndex))
         {
             // Find first valid button
             for (int i = 0; i < buttons.Count; i++)
             {
-                if (buttons[i].Visible && !buttons[i].Disabled)
+                if (IsValidButtonAtIndex(i))
                 {
                     currentIndex = i;
                     return;
