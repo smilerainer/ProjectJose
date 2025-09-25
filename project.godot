@@ -28,6 +28,10 @@ window/stretch/mode="viewport"
 
 project/assembly_name="test6"
 
+[global_group]
+
+ui=""
+
 [gui]
 
 theme/custom="uid://cq0ob8v8ekfds"

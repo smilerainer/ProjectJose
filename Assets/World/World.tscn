@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=4 uid="uid://f2q4l46jsk8c"]
+[gd_scene load_steps=9 format=4 uid="uid://f2q4l46jsk8c"]
 
 [ext_resource type="TileSet" uid="uid://mkn6xih8ecpo" path="res://Assets/World/Tilesets/Ground_TileSet.tres" id="1_0ukkx"]
 [ext_resource type="Script" uid="uid://dhitdsfdlky0x" path="res://Assets/Scripts/HexControls.cs" id="1_2o6ge"]
@@ -8,7 +8,6 @@
 [ext_resource type="TileSet" uid="uid://vbaxliadl1gn" path="res://Assets/World/Tilesets/Entity_TileSet.tres" id="3_rw40b"]
 [ext_resource type="Texture2D" uid="uid://b7mqiykktuwvt" path="res://Assets/Interface/default_cursor_down.png" id="4_0ukkx"]
 [ext_resource type="TileSet" uid="uid://h8ctwsrda6b3" path="res://Assets/World/Tilesets/Obstacle_TileSet.tres" id="4_h7mlw"]
-[ext_resource type="PackedScene" uid="uid://ducsxw626vu8p" path="res://Assets/Interface/MenuActions.tscn" id="9_h7mlw"]
 
 [node name="World" type="Node2D"]
 
@@ -45,15 +44,15 @@ tile_set = ExtResource("3_rw40b")
 
 [node name="Marker" type="TileMapLayer" parent="HexGrid/Markers"]
 
-[node name="HexControls" type="Node2D" parent="." node_paths=PackedStringArray("uiMenuNode", "cursorLayer", "camera")]
+[node name="HexControls" type="Node2D" parent="." node_paths=PackedStringArray("cursorLayer", "camera")]
 script = ExtResource("1_2o6ge")
-uiMenuNode = NodePath("../CanvasLayer2/CanvasLayer")
 cursorLayer = NodePath("../HexGrid/Selectors/Cursor")
 clickCursorTileId = 0
 camera = NodePath("../Camera2D")
 cameraSpeed = 4.0
 enableDebugHover = false
 enableDebugWASD = true
+enableCoordinatePrinting = true
 
 [node name="Camera2D" type="Camera2D" parent="."]
 
@@ -109,10 +108,3 @@ scroll_active = false
 [node name="DefaultCursorDown" type="Sprite2D" parent="Debug Screen/Control/Dialogue"]
 position = Vector2(294, 44)
 texture = ExtResource("4_0ukkx")
-
-[node name="CanvasLayer2" type="CanvasLayer" parent="."]
-
-[node name="CanvasLayer" parent="CanvasLayer2" instance=ExtResource("9_h7mlw")]
-anchors_preset = 12
-anchor_top = 1.0
-grow_vertical = 0
