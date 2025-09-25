@@ -9,7 +9,7 @@
 
 [node name="HexGrid" parent="." instance=ExtResource("2_n21b5")]
 
-[node name="InputLayerManager" type="Node2D" parent="."]
+[node name="CentralInputManager" type="Node2D" parent="."]
 script = ExtResource("3_arbkf")
 
 [node name="BattleManager" type="Node2D" parent="."]

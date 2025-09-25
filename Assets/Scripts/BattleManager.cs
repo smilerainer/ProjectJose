@@ -98,6 +98,11 @@ public partial class BattleManager : Node
             menuControls.ButtonActivated += OnButtonPressed;
         if (hexGrid != null)
             hexGrid.CellSelected += OnCellSelected;
+        if (hexControls != null)
+        {
+            hexControls.MovementCancelled += OnMovementCancelled;
+            GD.Print("[Battle] Connected to HexControls.MovementCancelled signal");
+        }
     }
     
     private void StartPlayerTurn()
@@ -243,14 +248,20 @@ public partial class BattleManager : Node
         var cursorLayer = hexGrid.GetLayer(CellLayer.Cursor);
         cursorLayer?.Clear();
         
-        // Return camera to player and disable hex input
+        // Return cursor to player and disable hex input
         if (hexControls != null)
         {
             hexControls.ExitMovementMode(playerPosition);
         }
         
         GD.Print("[Battle] Exited movement mode");
-        StartPlayerTurn();
+        StartPlayerTurn(); // This should reactivate the menu
+    }
+    
+    private void OnMovementCancelled()
+    {
+        GD.Print("[Battle] Movement cancelled by player");
+        ExitMovementMode();
     }
     
     private void OnCellSelected(Vector2I cell)

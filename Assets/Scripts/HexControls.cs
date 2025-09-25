@@ -5,6 +5,8 @@ using System.Collections.Generic;
 
 public partial class HexControls : Node2D
 {
+    [Signal] public delegate void MovementCancelledEventHandler();
+    
     [Signal] public delegate void CursorMovedEventHandler(Vector2I coord);
     [Signal] public delegate void CursorActivatedEventHandler(Vector2I coord);
 
@@ -26,6 +28,8 @@ public partial class HexControls : Node2D
     private HashSet<Vector2I> validMoves = new();
     private HexGrid hexGrid;
     private Tween cameraTween;
+
+    private bool justEnteredMovementMode = false;
 
     public Vector2I CursorPosition => cursorPosition;
     public bool IsActive => isActive;
@@ -97,7 +101,7 @@ public partial class HexControls : Node2D
     public void SetCameraLocked(bool locked)
     {
         followWithCamera = !locked;
-        GD.Print("[HexControls] Camera " + (locked ? "locked" : "free"));
+        GD.Print("[HexControls] Cursor " + (locked ? "locked" : "free"));
     }
 
     public void FocusOnPosition(Vector2I position)
@@ -109,11 +113,12 @@ public partial class HexControls : Node2D
     public void EnterMovementMode()
     {
         movementModeActive = true;
-        SetCameraLocked(false); // Enable free camera
+        justEnteredMovementMode = true; // Prevent immediate cancellation
+        SetCameraLocked(false); // Enable free cursor
         SetActive(true); // Enable hex interactions
         cursorPosition = GetPlayerPosition(); // Start cursor at player
-        GD.Print($"[HexControls] Entered movement mode - cursor at {cursorPosition}, validMoves count: {validMoves.Count}");
         UpdateCursorVisual();
+        GD.Print($"[HexControls] Entered movement mode - cursor at {cursorPosition}, validMoves count: {validMoves.Count}");
     }
 
     public void ExitMovementMode(Vector2I focusPosition)
@@ -122,17 +127,17 @@ public partial class HexControls : Node2D
         validMoves.Clear();
         SetActive(false); // Disable hex interactions
         FocusOnPosition(focusPosition); // Focus on final position
-        SetCameraLocked(true); // Lock camera
-        GD.Print($"[HexControls] Exited movement mode - camera locked on {focusPosition}");
+        SetCameraLocked(true); // Lock cursor
+        GD.Print($"[HexControls] Exited movement mode - cursor locked on {focusPosition}");
     }
 
     public void StartUIOnlyMode(Vector2I focusPosition)
     {
         movementModeActive = false;
         SetActive(false); // Disable hex interactions
-        SetCameraLocked(true); // Lock camera
-        FocusOnPosition(focusPosition); // Focus camera
-        GD.Print($"[HexControls] UI-only mode - camera locked on {focusPosition}");
+        SetCameraLocked(true); // Lock cursor
+        FocusOnPosition(focusPosition); // Focus cursor
+        GD.Print($"[HexControls] UI-only mode - cursor locked on {focusPosition}");
     }
 
     public void SetValidMoves(HashSet<Vector2I> moves)
@@ -162,7 +167,8 @@ public partial class HexControls : Node2D
                     ConfirmMove();
                     return;
                 case Key.Escape:
-                    CancelMovement();
+                    ResetToNeutralState();
+                    EmitSignal(SignalName.MovementCancelled);
                     return;
             }
             
@@ -194,6 +200,9 @@ public partial class HexControls : Node2D
     
     private void MoveMovementCursor(Vector2I direction)
     {
+        // Clear the "just entered" flag on first movement attempt
+        justEnteredMovementMode = false;
+        
         var newPos = cursorPosition + direction;
         
         // Check if the new position is adjacent to current cursor position
@@ -225,9 +234,23 @@ public partial class HexControls : Node2D
         
         if (cursorPosition == playerPos)
         {
-            GD.Print($"[HexControls] Cannot move to current player position {cursorPosition}");
+            // Don't allow immediate cancellation when just entering movement mode
+            if (justEnteredMovementMode)
+            {
+                GD.Print($"[HexControls] Ignoring immediate cancellation attempt - user must move cursor first");
+                justEnteredMovementMode = false; // Clear flag for future input
+                return;
+            }
+            
+            // Cancel movement mode by emitting signal and resetting visuals
+            GD.Print($"[HexControls] Cancelling movement - cursor at player position {cursorPosition}");
+            ResetToNeutralState();
+            EmitSignal(SignalName.MovementCancelled);
             return;
         }
+        
+        // Clear the flag since user is making a valid move
+        justEnteredMovementMode = false;
         
         if (validMoves.Contains(cursorPosition))
         {
@@ -243,17 +266,32 @@ public partial class HexControls : Node2D
         }
     }
     
-    private void CancelMovement()
+    private void ResetToNeutralState()
     {
-        // Move cursor back to player and exit movement mode
+        GD.Print("[HexControls] Resetting visual state (letting BattleManager handle full reset)");
+        
+        // Clear visual highlights immediately for user feedback
+        if (hexGrid != null)
+        {
+            var markerLayer = hexGrid.GetLayer(CellLayer.Marker);
+            markerLayer?.Clear();
+            
+            var cursorLayer = hexGrid.GetLayer(CellLayer.Cursor);
+            cursorLayer?.Clear();
+        }
+        
+        // Reset cursor position to player position
         var playerPos = GetPlayerPosition();
         cursorPosition = playerPos;
         UpdateCursorVisual();
         
-        // This should trigger BattleManager to exit movement mode
-        // For now, we'll just print - BattleManager should handle this via escape key
-        GD.Print("[HexControls] Movement cancelled");
+        // Don't disable everything here - let BattleManager handle proper state transition
+        // Just clear the visuals for immediate user feedback
+        
+        GD.Print("[HexControls] Visual reset complete - BattleManager should handle full state transition");
     }
+    
+    // Removed CancelMovement() method - now using signals to communicate with BattleManager
     
     #endregion
 
