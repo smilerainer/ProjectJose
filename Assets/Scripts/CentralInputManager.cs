@@ -17,11 +17,15 @@ public partial class CentralInputManager : Node2D
     [Export] private Texture2D cursorTexture;
     [Export] private Vector2 cursorOffset = Vector2.Zero;
     [Export] private bool enableCursor = true;
-    [Export] private float cursorSmoothness = 8f;
     [Export] private Vector2 uiCursorOffset = Vector2.Zero;
     [Export] private bool enableDebugTabCycling = false;
-    [Export] private bool enableVerboseDebug = true; // Add this for detailed logging
-    [Export] private bool debugCursorPositioning = true; // Specific cursor debug flag
+    [Export] private bool enableVerboseDebug = true;
+    [Export] private bool debugCursorPositioning = true;
+    [Export] private bool enableCursorSnapping = true; // New: instant positioning for pixel-perfect games
+    
+    // Cursor timing constants - optimized for responsive feel
+    private const float CURSOR_SPEED = 1200.0f; // pixels per second - fast enough to reach anywhere in ~100ms
+    private const float SNAP_DISTANCE = 3.0f; // snap when within 3 pixels - imperceptible to user
 
     private InputContext currentContext = InputContext.None;
     private List<MenuControls> menuControls = new();
@@ -39,6 +43,10 @@ public partial class CentralInputManager : Node2D
     private Vector2 targetCursorPosition = Vector2.Zero;
     private Node currentActiveControl;
 
+    // Debug frame throttling
+    private int lastDebugFrame = -1;
+    private int lastVerboseDebugFrame = -1;
+
     public InputContext CurrentContext => currentContext;
     public Node ActiveControl => currentActiveControl;
 
@@ -47,12 +55,16 @@ public partial class CentralInputManager : Node2D
     public override void _Ready()
     {
         // Set HIGHEST priority to intercept inputs first
-        ProcessPriority = -10000; // Much higher priority
+        ProcessPriority = -10000;
         
         InitializeInputManager();
         SetupCursorDisplay();
         
-        GD.Print($"[InputManager] _Ready complete - ProcessPriority: {ProcessPriority}");
+        // Position cursor on initial active control after everything is set up
+        CallDeferred(nameof(InitialCursorPositioning));
+        
+        if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+            GD.Print($"[InputManager] _Ready complete - ProcessPriority: {ProcessPriority}");
     }
 
     public override void _Process(double delta)
@@ -66,7 +78,7 @@ public partial class CentralInputManager : Node2D
         // Try _UnhandledInput as backup - this runs AFTER other nodes have processed
         if (enableDebugTabCycling && @event.IsActionPressed("ui_focus_next"))
         {
-            if (enableVerboseDebug)
+            if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
                 GD.Print("[InputManager] _UnhandledInput: Tab detected as UNHANDLED - intercepting!");
             
             GetViewport().SetInputAsHandled();
@@ -79,7 +91,7 @@ public partial class CentralInputManager : Node2D
         // Only log Tab key, not every input
         if (enableDebugTabCycling && @event.IsActionPressed("ui_focus_next"))
         {
-            if (enableVerboseDebug)
+            if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
                 GD.Print("[InputManager] _Input: Tab detected - attempting to handle!");
             
             GetViewport().SetInputAsHandled();
@@ -96,7 +108,8 @@ public partial class CentralInputManager : Node2D
         if (!menuControls.Contains(menu))
         {
             menuControls.Add(menu);
-            GD.Print($"[InputManager] Registered MenuControl: {menu.Name}");
+            if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                GD.Print($"[InputManager] Registered MenuControl: {menu.Name}");
         }
     }
 
@@ -105,7 +118,8 @@ public partial class CentralInputManager : Node2D
         if (!hexControls.Contains(hex))
         {
             hexControls.Add(hex);
-            GD.Print($"[InputManager] Registered HexControl: {hex.Name}");
+            if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                GD.Print($"[InputManager] Registered HexControl: {hex.Name}");
         }
     }
 
@@ -114,8 +128,24 @@ public partial class CentralInputManager : Node2D
         if (!novelControls.Contains(novel))
         {
             novelControls.Add(novel);
-            GD.Print($"[InputManager] Registered NovelControl: {novel.Name}");
+            if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                GD.Print($"[InputManager] Registered NovelControl: {novel.Name}");
         }
+    }
+
+    #endregion
+
+    #region Debug Helpers
+
+    private bool ShouldDebugThisFrame(ref int lastFrameRef)
+    {
+        int currentFrame = (int)Engine.GetProcessFrames();
+        if (currentFrame != lastFrameRef)
+        {
+            lastFrameRef = currentFrame;
+            return true;
+        }
+        return false;
     }
 
     #endregion
@@ -203,10 +233,13 @@ public partial class CentralInputManager : Node2D
 
     private void OnContextChanged(InputContext oldContext, InputContext newContext)
     {
-        GD.Print($"[InputManager] Context changed: {oldContext} -> {newContext}");
+        if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+        {
+            GD.Print($"[InputManager] Context changed: {oldContext} -> {newContext}");
 
-        if (currentActiveControl != null)
-            GD.Print($"[InputManager] Active control: {currentActiveControl.GetType().Name} ({currentActiveControl.Name})");
+            if (currentActiveControl != null)
+                GD.Print($"[InputManager] Active control: {currentActiveControl.GetType().Name} ({currentActiveControl.Name})");
+        }
 
         UpdateCursorTarget();
     }
@@ -312,9 +345,12 @@ public partial class CentralInputManager : Node2D
         SetProcessInput(true);
         SetProcessUnhandledInput(true);
         
-        GD.Print($"[InputManager] Initialized - ProcessPriority: {ProcessPriority}");
-        GD.Print($"[InputManager] ProcessInput: {IsProcessingInput()}, ProcessUnhandledInput: {IsProcessingUnhandledInput()}");
-        GD.Print($"[InputManager] Debug tab cycling enabled: {enableDebugTabCycling}");
+        if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+        {
+            GD.Print($"[InputManager] Initialized - ProcessPriority: {ProcessPriority}");
+            GD.Print($"[InputManager] ProcessInput: {IsProcessingInput()}, ProcessUnhandledInput: {IsProcessingUnhandledInput()}");
+            GD.Print($"[InputManager] Debug tab cycling enabled: {enableDebugTabCycling}");
+        }
     }
 
     private void AutoDiscoverControls()
@@ -325,7 +361,8 @@ public partial class CentralInputManager : Node2D
         DiscoverControlsRecursively(sceneRoot);
         BuildMenuSpatialGrid();
 
-        GD.Print($"[InputManager] Auto-discovered: {menuControls.Count} menus, {hexControls.Count} hex, {novelControls.Count} novels");
+        if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+            GD.Print($"[InputManager] Auto-discovered: {menuControls.Count} menus, {hexControls.Count} hex, {novelControls.Count} novels");
     }
     
     private void BuildMenuSpatialGrid()
@@ -382,17 +419,20 @@ public partial class CentralInputManager : Node2D
             }
         }
 
-        // Debug output
-        GD.Print($"[InputManager] Built {gridWidth}x{gridHeight} menu spatial grid:");
-        for (int y = 0; y < gridHeight; y++)
+        // Debug output (throttled)
+        if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
         {
-            var rowMenus = new List<string>();
-            for (int x = 0; x < gridWidth; x++)
+            GD.Print($"[InputManager] Built {gridWidth}x{gridHeight} menu spatial grid:");
+            for (int y = 0; y < gridHeight; y++)
             {
-                var menu = menuSpatialGrid[x, y];
-                rowMenus.Add(menu?.Name ?? "null");
+                var rowMenus = new List<string>();
+                for (int x = 0; x < gridWidth; x++)
+                {
+                    var menu = menuSpatialGrid[x, y];
+                    rowMenus.Add(menu?.Name ?? "null");
+                }
+                GD.Print($"  Row {y}: [{string.Join(", ", rowMenus)}]");
             }
-            GD.Print($"  Row {y}: [{string.Join(", ", rowMenus)}]");
         }
         
         // Start at the first available position
@@ -442,7 +482,8 @@ public partial class CentralInputManager : Node2D
     
     private void CycleDebugMenuFocus()
     {
-        GD.Print("=== CycleDebugMenuFocus CALLED ===");
+        if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+            GD.Print("=== CycleDebugMenuFocus CALLED ===");
         
         if (menuSpatialGrid == null || gridWidth == 0 || gridHeight == 0) 
         {
@@ -450,21 +491,25 @@ public partial class CentralInputManager : Node2D
             return;
         }
         
-        GD.Print($"[InputManager] BEFORE - Active menus:");
-        foreach (var menu in menuControls)
+        if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
         {
-            if (menu.IsActive)
-                GD.Print($"  - {menu.Name} is ACTIVE");
+            GD.Print($"[InputManager] BEFORE - Active menus:");
+            foreach (var menu in menuControls)
+            {
+                if (menu.IsActive)
+                    GD.Print($"  - {menu.Name} is ACTIVE");
+            }
+            
+            GD.Print($"[InputManager] Current grid position: {currentGridPosition}");
         }
-        
-        GD.Print($"[InputManager] Current grid position: {currentGridPosition}");
         
         // Deactivate all menus
         foreach (var menu in menuControls)
         {
             if (menu.IsActive)
             {
-                GD.Print($"[InputManager] Deactivating menu: {menu.Name}");
+                if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                    GD.Print($"[InputManager] Deactivating menu: {menu.Name}");
                 menu.SetActive(false);
             }
         }
@@ -474,24 +519,29 @@ public partial class CentralInputManager : Node2D
         MoveToNextGridPosition();
         EnsureValidGridPosition();
         
-        GD.Print($"[InputManager] Moved from {oldPosition} to {currentGridPosition}");
+        if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+            GD.Print($"[InputManager] Moved from {oldPosition} to {currentGridPosition}");
         
         // Activate the new menu and reset it to 0,0 button
         var newMenu = GetMenuAtGridPosition(currentGridPosition);
         if (newMenu != null)
         {
-            GD.Print($"[InputManager] Activating menu: {newMenu.Name} at grid position {currentGridPosition}");
+            if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                GD.Print($"[InputManager] Activating menu: {newMenu.Name} at grid position {currentGridPosition}");
+            
             newMenu.SetActive(true);
             
             // Reset the menu to its 0,0 button position (if method exists)
             if (newMenu.HasMethod("ResetToFirstButton"))
             {
                 newMenu.Call("ResetToFirstButton");
-                GD.Print($"[InputManager] Reset {newMenu.Name} to first button");
+                if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                    GD.Print($"[InputManager] Reset {newMenu.Name} to first button");
             }
             else
             {
-                GD.Print($"[InputManager] WARNING: {newMenu.Name} does not have ResetToFirstButton method");
+                if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                    GD.Print($"[InputManager] WARNING: {newMenu.Name} does not have ResetToFirstButton method");
             }
             
             UpdateCursorTarget(); // Update cursor to new position
@@ -501,19 +551,24 @@ public partial class CentralInputManager : Node2D
             GD.PrintErr($"[InputManager] CRITICAL: No menu found at grid position {currentGridPosition}!");
         }
         
-        GD.Print($"[InputManager] AFTER - Active menus:");
-        foreach (var menu in menuControls)
+        if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
         {
-            if (menu.IsActive)
-                GD.Print($"  - {menu.Name} is NOW ACTIVE");
+            GD.Print($"[InputManager] AFTER - Active menus:");
+            foreach (var menu in menuControls)
+            {
+                if (menu.IsActive)
+                    GD.Print($"  - {menu.Name} is NOW ACTIVE");
+            }
+            
+            GD.Print("=== CycleDebugMenuFocus COMPLETE ===");
         }
-        
-        GD.Print("=== CycleDebugMenuFocus COMPLETE ===");
     }
     
     public void RefreshUILayout()
     {
-        GD.Print("[InputManager] Refreshing UI layout...");
+        if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+            GD.Print("[InputManager] Refreshing UI layout...");
+        
         BuildMenuSpatialGrid();
         
         // If there was an active menu, try to keep it active
@@ -521,7 +576,8 @@ public partial class CentralInputManager : Node2D
         if (currentActiveMenu != null && menuGridPositions.ContainsKey(currentActiveMenu))
         {
             currentGridPosition = menuGridPositions[currentActiveMenu];
-            GD.Print($"[InputManager] Maintained focus on {currentActiveMenu.Name} at position {currentGridPosition}");
+            if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                GD.Print($"[InputManager] Maintained focus on {currentActiveMenu.Name} at position {currentGridPosition}");
         }
         else
         {
@@ -534,37 +590,123 @@ public partial class CentralInputManager : Node2D
     // Call this when a MenuControls changes its button focus
     public void NotifyButtonFocusChanged()
     {
+        // ALWAYS output debug info for this critical method
+        GD.Print($"[CURSOR] ═══ NotifyButtonFocusChanged() CALLED ═══");
+        GD.Print($"[CURSOR] Current context: {currentContext}");
+        GD.Print($"[CURSOR] Active control: {currentActiveControl?.GetType().Name} ({currentActiveControl?.Name})");
+        
         // Force immediate cursor update
         UpdateCursorTarget();
         
-        if (debugCursorPositioning)
-            GD.Print("[CURSOR] Button focus changed - cursor updated");
+        GD.Print($"[CURSOR] Target position: {targetCursorPosition}");
+        if (cursorDisplay != null)
+        {
+            GD.Print($"[CURSOR] Cursor display position: {cursorDisplay.Position}");
+            GD.Print($"[CURSOR] Cursor offset: {cursorOffset}");
+        }
+        else
+        {
+            GD.PrintErr("[CURSOR] ❌ cursorDisplay is NULL!");
+        }
+        
+        GD.Print($"[CURSOR] ═══ NotifyButtonFocusChanged() COMPLETE ═══");
+    }
+
+    // Initial cursor positioning when scene loads
+    private void InitialCursorPositioning()
+    {
+        // Scan for active controls first
+        ScanForActiveControls();
+        
+        // If we found an active control, position cursor there
+        if (currentActiveControl != null)
+        {
+            var actionPos = GetCurrentActionPosition();
+            if (actionPos != Vector2.Zero)
+            {
+                targetCursorPosition = actionPos;
+                if (cursorDisplay != null)
+                {
+                    // Set cursor immediately without smoothing for initial positioning
+                    cursorDisplay.Position = targetCursorPosition.Round() - cursorOffset;
+                }
+                
+                if (debugCursorPositioning && ShouldDebugThisFrame(ref lastDebugFrame))
+                    GD.Print($"[CURSOR] Initial positioning: {currentActiveControl.GetType().Name} ({currentActiveControl.Name}) at {targetCursorPosition}");
+            }
+        }
+        else
+        {
+            // No active control found initially - try again after a short delay
+            // This handles cases where MenuControls haven't finished initializing yet
+            GetTree().CreateTimer(0.1f).Connect("timeout", new Callable(this, nameof(DelayedInitialPositioning)));
+            
+            if (debugCursorPositioning && ShouldDebugThisFrame(ref lastDebugFrame))
+                GD.Print("[CURSOR] Initial positioning: No active control found, retrying in 0.1s");
+        }
+    }
+    
+    private void DelayedInitialPositioning()
+    {
+        ScanForActiveControls();
+        
+        if (currentActiveControl != null)
+        {
+            var actionPos = GetCurrentActionPosition();
+            if (actionPos != Vector2.Zero)
+            {
+                targetCursorPosition = actionPos;
+                if (cursorDisplay != null)
+                {
+                    cursorDisplay.Position = targetCursorPosition.Round() - cursorOffset;
+                }
+                
+                if (debugCursorPositioning && ShouldDebugThisFrame(ref lastDebugFrame))
+                    GD.Print($"[CURSOR] Delayed initial positioning: {currentActiveControl.GetType().Name} ({currentActiveControl.Name}) at {targetCursorPosition}");
+            }
+        }
+        else
+        {
+            // Still no active control, position at mouse
+            targetCursorPosition = GetViewport().GetMousePosition();
+            if (cursorDisplay != null)
+            {
+                cursorDisplay.Position = targetCursorPosition.Round() - cursorOffset;
+            }
+            
+            if (debugCursorPositioning && ShouldDebugThisFrame(ref lastDebugFrame))
+                GD.Print("[CURSOR] Delayed initial positioning: No active control, using mouse position");
+        }
     }
 
     private void DiscoverControlsRecursively(Node node)
     {
-        if (enableVerboseDebug)
+        if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
             GD.Print($"[InputManager] Scanning node: {node.Name} ({node.GetType().Name})");
         
         switch (node)
         {
             case MenuControls menu:
                 RegisterMenuControl(menu);
-                GD.Print($"[InputManager] ✓ FOUND MenuControls: {menu.Name} ({menu.GetType().Name}) at {menu.GlobalPosition}");
+                if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                    GD.Print($"[InputManager] ✓ FOUND MenuControls: {menu.Name} ({menu.GetType().Name}) at {menu.GlobalPosition}");
                 break;
             case HexControls hex:
                 RegisterHexControl(hex);
-                GD.Print($"[InputManager] ✓ FOUND HexControls: {hex.Name} ({hex.GetType().Name})");
+                if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                    GD.Print($"[InputManager] ✓ FOUND HexControls: {hex.Name} ({hex.GetType().Name})");
                 break;
             case NovelControls novel:
                 RegisterNovelControl(novel);
-                GD.Print($"[InputManager] ✓ FOUND NovelControls: {novel.Name} ({novel.GetType().Name})");
+                if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                    GD.Print($"[InputManager] ✓ FOUND NovelControls: {novel.Name} ({novel.GetType().Name})");
                 break;
             default:
                 // Check if this node has the script attached but isn't being detected
                 if (node.HasMethod("SetActive") && node.HasMethod("IsActive"))
                 {
-                    GD.Print($"[InputManager] ⚠️  Node {node.Name} ({node.GetType().Name}) has menu methods but isn't MenuControls type!");
+                    if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                        GD.Print($"[InputManager] ⚠️  Node {node.Name} ({node.GetType().Name}) has menu methods but isn't MenuControls type!");
                 }
                 break;
         }
@@ -598,12 +740,14 @@ public partial class CentralInputManager : Node2D
         if (uiLayer != null)
         {
             uiLayer.AddChild(cursorDisplay);
-            GD.Print("[InputManager] Created cursor on UI layer");
+            if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                GD.Print("[InputManager] Created cursor on UI layer");
         }
         else
         {
             AddChild(cursorDisplay);
-            GD.Print("[InputManager] Created cursor as direct child");
+            if (enableVerboseDebug && ShouldDebugThisFrame(ref lastVerboseDebugFrame))
+                GD.Print("[InputManager] Created cursor as direct child");
         }
 
         targetCursorPosition = GetViewport().GetMousePosition();
@@ -632,7 +776,42 @@ public partial class CentralInputManager : Node2D
         }
 
         var currentPos = cursorDisplay.Position + cursorOffset;
-        var newPos = currentPos.Lerp(targetCursorPosition, cursorSmoothness * (float)delta);
+        Vector2 newPos;
+
+        if (enableCursorSnapping)
+        {
+            // Instant positioning for pixel-perfect games
+            newPos = targetCursorPosition;
+        }
+        else
+        {
+            // Fast physics-based movement with guaranteed timing
+            var distance = currentPos.DistanceTo(targetCursorPosition);
+            
+            if (distance <= SNAP_DISTANCE)
+            {
+                // Snap when very close - imperceptible to user
+                newPos = targetCursorPosition;
+            }
+            else
+            {
+                // Move at constant speed towards target
+                var direction = (targetCursorPosition - currentPos).Normalized();
+                var moveDistance = CURSOR_SPEED * (float)delta;
+                
+                // Don't overshoot the target
+                if (moveDistance >= distance)
+                {
+                    newPos = targetCursorPosition;
+                }
+                else
+                {
+                    newPos = currentPos + (direction * moveDistance);
+                }
+            }
+        }
+
+        // Apply pixel-perfect positioning
         cursorDisplay.Position = newPos.Round() - cursorOffset;
     }
 
@@ -654,50 +833,65 @@ public partial class CentralInputManager : Node2D
         Vector2 finalPosition = Vector2.Zero;
         string positionSource = "none";
         
-        // First, try to get the currently highlighted button's position
-        var currentButton = menu.CurrentButton;
-        if (currentButton != null && currentButton is Control buttonControl)
+        // NEW APPROACH: Find the actually focused button in the scene instead of relying on MenuControls
+        var focusedButton = GetCurrentlyFocusedButton();
+        
+        if (focusedButton != null && focusedButton is Control buttonControl)
         {
             var buttonRect = buttonControl.GetGlobalRect();
-            finalPosition = buttonRect.Position + uiCursorOffset;
-            positionSource = $"button '{buttonControl.Name}' top-left";
+            // Use center of button for consistent positioning
+            finalPosition = buttonRect.Position + (buttonRect.Size * 0.5f) + uiCursorOffset;
+            positionSource = $"scene-focused button '{buttonControl.Name}' center";
             
-            if (debugCursorPositioning)
+            // Enhanced debug output to track button changes
+            if (debugCursorPositioning && ShouldDebugThisFrame(ref lastDebugFrame))
             {
-                GD.Print($"[CURSOR] Menu '{menu.Name}' -> {positionSource}");
+                GD.Print($"[CURSOR] Found focused button: {buttonControl.Name}");
                 GD.Print($"  Button rect: {buttonRect}");
-                GD.Print($"  Final position: {finalPosition} (with offset: {uiCursorOffset})");
+                GD.Print($"  Final position: {finalPosition}");
             }
         }
-        // Fallback: use the menu container's top-left position
-        else if (menu is Control menuControl)
-        {
-            var menuRect = menuControl.GetGlobalRect();
-            finalPosition = menuRect.Position + uiCursorOffset;
-            positionSource = "menu container top-left";
-            
-            if (debugCursorPositioning)
-            {
-                GD.Print($"[CURSOR] Menu '{menu.Name}' -> {positionSource}");
-                GD.Print($"  Menu rect: {menuRect}");
-                GD.Print($"  Final position: {finalPosition} (with offset: {uiCursorOffset})");
-            }
-        }
-        // Final fallback: use global position
         else
         {
-            finalPosition = menu.GlobalPosition + uiCursorOffset;
-            positionSource = "global position";
-            
-            if (debugCursorPositioning)
+            // Fallback: try to get current button from MenuControls (original approach)
+            var currentButton = menu.CurrentButton;
+            if (currentButton != null && currentButton is Control fallbackControl)
             {
-                GD.Print($"[CURSOR] Menu '{menu.Name}' -> {positionSource}");
-                GD.Print($"  Global pos: {menu.GlobalPosition}");
-                GD.Print($"  Final position: {finalPosition} (with offset: {uiCursorOffset})");
+                var buttonRect = fallbackControl.GetGlobalRect();
+                finalPosition = buttonRect.Position + (buttonRect.Size * 0.5f) + uiCursorOffset;
+                positionSource = $"menucontrols button '{fallbackControl.Name}' center";
+            }
+            else if (menu is Control menuControl)
+            {
+                var menuRect = menuControl.GetGlobalRect();
+                finalPosition = menuRect.Position + (menuRect.Size * 0.5f) + uiCursorOffset;
+                positionSource = "menu container center";
+            }
+            else
+            {
+                finalPosition = menu.GlobalPosition + uiCursorOffset;
+                positionSource = "global position";
+            }
+            
+            if (debugCursorPositioning && ShouldDebugThisFrame(ref lastDebugFrame))
+            {
+                GD.Print($"[CURSOR] No focused button found, using fallback: {positionSource}");
+                GD.Print($"  Final position: {finalPosition}");
             }
         }
         
         return finalPosition;
+    }
+    
+    // Find the currently focused button in the entire scene
+    private BaseButton GetCurrentlyFocusedButton()
+    {
+        var focusOwner = GetViewport().GuiGetFocusOwner();
+        if (focusOwner is BaseButton button)
+        {
+            return button;
+        }
+        return null;
     }
 
     private Vector2 GetHexScreenPosition(HexControls hex)

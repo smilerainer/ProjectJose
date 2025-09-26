@@ -16,7 +16,12 @@ position = Vector2(-3, 2)
 scale = Vector2(2.94759, 1.28409)
 script = ExtResource("3_arbkf")
 cursorTexture = ExtResource("3_ad07i")
+cursorSmoothness = 10.0
+uiCursorOffset = Vector2(-21, 0)
 enableDebugTabCycling = true
+enableVerboseDebug = false
+debugCursorPositioning = false
+enableCursorSnapping = false
 
 [node name="BattleManager" type="Node2D" parent="."]
 script = ExtResource("1_kei0r")

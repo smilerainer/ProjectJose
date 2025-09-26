@@ -1,4 +1,4 @@
-// MenuControls.cs - Dead simple 2x2 grid
+// MenuControls.cs - Dead simple 2x2 grid with cursor integration
 using Godot;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,8 +9,6 @@ public partial class MenuControls : Control
     [Signal] public delegate void ButtonActivatedEventHandler(int index, BaseButton button);
     [Signal] public delegate void MenuActivatedEventHandler();
     [Signal] public delegate void MenuDeactivatedEventHandler();
-    [Export] private Node2D centralInputManager;
-
     
     [Export] private bool wrapNavigation = true;
     [Export] private bool autoActivateOnShow = true;
@@ -20,6 +18,7 @@ public partial class MenuControls : Control
     private int currentRow = 0;
     private int currentCol = 0;
     private bool isActive = false;
+    private CentralInputManager inputManager;
     
     // Simple 2x2 grid - buttons[0]=move, buttons[1]=skill, buttons[2]=item, buttons[3]=talk
     // Grid layout:
@@ -33,6 +32,7 @@ public partial class MenuControls : Control
     public override void _Ready()
     {
         InitializeMenu();
+        FindInputManager();
     }
     
     #region Public API
@@ -46,57 +46,52 @@ public partial class MenuControls : Control
             ActivateMenu();
         else
             DeactivateMenu();
+        
+        // Always notify cursor when activation state changes
+        NotifyInputManagerCursorUpdate();
     }
     
     public void Navigate(Vector2I direction)
-{
-    if (!isActive || buttons.Count != 4) return;
-    
-    int newRow = currentRow;
-    int newCol = currentCol;
-    
-    if (direction.Y > 0) newRow++; // Down
-    else if (direction.Y < 0) newRow--; // Up
-    else if (direction.X > 0) newCol++; // Right
-    else if (direction.X < 0) newCol--; // Left
-    
-    // Check bounds and wrapping
-    if (wrapNavigation)
     {
-        newRow = (newRow + 2) % 2; // Wrap between 0 and 1
-        newCol = (newCol + 2) % 2; // Wrap between 0 and 1
-    }
-    else
-    {
-        newRow = Mathf.Clamp(newRow, 0, 1);
-        newCol = Mathf.Clamp(newCol, 0, 1);
-    }
-
-    // Only move if position actually changed
-    if (newRow != currentRow || newCol != currentCol)
-    {
-        GD.Print($"[MenuControls] Navigate: ({currentRow},{currentCol}) -> ({newRow},{newCol})");
-        currentRow = newRow;
-        currentCol = newCol;
-        ApplySelection();
+        if (!isActive || buttons.Count != 4) return;
         
-        // Fix the node path and remove duplicate call
-        var centralManager = GetNodeOrNull<CentralInputManager>("/TestBattle2/CentralInputManager");
-        if (centralManager != null)
+        int newRow = currentRow;
+        int newCol = currentCol;
+        
+        if (direction.Y > 0) newRow++; // Down
+        else if (direction.Y < 0) newRow--; // Up
+        else if (direction.X > 0) newCol++; // Right
+        else if (direction.X < 0) newCol--; // Left
+        
+        // Check bounds and wrapping
+        if (wrapNavigation)
         {
-            centralManager.NotifyButtonFocusChanged();
-            GD.Print("✅ NotifyButtonFocusChanged() called successfully");
+            newRow = (newRow + 2) % 2; // Wrap between 0 and 1
+            newCol = (newCol + 2) % 2; // Wrap between 0 and 1
         }
         else
         {
-            GD.PrintErr("❌ CentralInputManager not found at /TestBattle2/CentralInputManager");
+            newRow = Mathf.Clamp(newRow, 0, 1);
+            newCol = Mathf.Clamp(newCol, 0, 1);
+        }
+
+        // Only move if position actually changed
+        if (newRow != currentRow || newCol != currentCol)
+        {
+            GD.Print($"[MenuControls] Navigate: ({currentRow},{currentCol}) -> ({newRow},{newCol})");
+            currentRow = newRow;
+            currentCol = newCol;
+            ApplySelection();
+            
+            // ONLY notify cursor when navigation actually succeeds
+            NotifyInputManagerCursorUpdate();
+        }
+        else
+        {
+            GD.Print($"[MenuControls] Navigate: ({currentRow},{currentCol}) - no movement (blocked or same position)");
+            // Do NOT notify cursor when navigation is blocked
         }
     }
-    else
-    {
-        GD.Print($"[MenuControls] Navigate: ({currentRow},{currentCol}) - no movement (blocked or same position)");
-    }
-}
     
     public void ActivateCurrentButton()
     {
@@ -106,19 +101,104 @@ public partial class MenuControls : Control
         button.EmitSignal(BaseButton.SignalName.Pressed);
         EmitSignal(SignalName.ButtonActivated, GetLinearIndex(), button);
     }
-    public void ResetToFirstButton()
-{
-    currentRow = 0;
-    currentCol = 0;
-    ApplySelection();
     
-    // Notify cursor update after reset
-    var centralManager = GetNodeOrNull<CentralInputManager>("/TestBattle2/CentralInputManager");
-    if (centralManager != null)
+    public void ResetToFirstButton()
     {
-        centralManager.NotifyButtonFocusChanged();
+        currentRow = 0;
+        currentCol = 0;
+        ApplySelection();
+        
+        // Notify cursor update after reset
+        NotifyInputManagerCursorUpdate();
     }
-}
+    
+    #endregion
+
+    #region Cursor Integration
+    
+    private void FindInputManager()
+    {
+        // Try multiple common paths for the input manager
+        inputManager = GetNodeOrNull<CentralInputManager>("/TestBattle2/CentralInputManager");
+        
+        if (inputManager == null)
+        {
+            // Try finding it anywhere in the scene tree
+            inputManager = GetTree().GetFirstNodeInGroup("input_manager") as CentralInputManager;
+        }
+        
+        if (inputManager == null)
+        {
+            // Try finding it as a child of the scene root
+            var sceneRoot = GetTree().CurrentScene;
+            inputManager = sceneRoot.GetNodeOrNull<CentralInputManager>("CentralInputManager");
+        }
+        
+        if (inputManager == null)
+        {
+            // Last resort: search recursively
+            inputManager = FindInputManagerRecursive(GetTree().CurrentScene);
+        }
+        
+        if (inputManager != null)
+        {
+            GD.Print($"[MenuControls] Found CentralInputManager for {Name}");
+        }
+        else
+        {
+            GD.PrintErr($"[MenuControls] Could not find CentralInputManager for {Name}");
+        }
+    }
+    
+    private CentralInputManager FindInputManagerRecursive(Node node)
+    {
+        if (node is CentralInputManager manager)
+            return manager;
+            
+        foreach (Node child in node.GetChildren())
+        {
+            var found = FindInputManagerRecursive(child);
+            if (found != null)
+                return found;
+        }
+        
+        return null;
+    }
+    
+    private void NotifyInputManagerCursorUpdate()
+    {
+        // Enhanced debug output to track cursor updates
+        var currentButton = CurrentButton;
+        GD.Print($"[MenuControls] {Name} NotifyInputManagerCursorUpdate called");
+        GD.Print($"  Current position: ({currentRow}, {currentCol})");
+        GD.Print($"  Current button: {currentButton?.Name ?? "NULL"}");
+        if (currentButton != null && currentButton is Control buttonControl)
+        {
+            GD.Print($"  Button global rect: {buttonControl.GetGlobalRect()}");
+            GD.Print($"  Button global position: {buttonControl.GlobalPosition}");
+        }
+        
+        if (inputManager != null)
+        {
+            GD.Print($"  ✅ Calling inputManager.NotifyButtonFocusChanged()");
+            inputManager.NotifyButtonFocusChanged();
+        }
+        else
+        {
+            GD.Print($"  ❌ InputManager is NULL - trying to find it again");
+            // Try to find it again if it wasn't found before
+            FindInputManager();
+            if (inputManager != null)
+            {
+                GD.Print($"  ✅ Found InputManager on retry - calling NotifyButtonFocusChanged()");
+                inputManager.NotifyButtonFocusChanged();
+            }
+            else
+            {
+                GD.Print($"  ❌ Still no InputManager found");
+            }
+        }
+    }
     
     #endregion
 
@@ -149,10 +229,17 @@ public partial class MenuControls : Control
         isActive = false;
         
         if (autoActivateOnShow && Visible)
+        {
             SetActive(true);
+        }
             
         // Debug: print button assignments
-        if (buttons.Count == 4)
+        if (buttons.Count == 2)
+        {
+            GD.Print($"[MenuControls] 2-button layout assigned:");
+            GD.Print($"  (0,0) = {buttons[0]?.Name}  (0,1) = {buttons[1]?.Name}");
+        }
+        else if (buttons.Count == 4)
         {
             GD.Print($"[MenuControls] 2x2 Grid assigned:");
             GD.Print($"  (0,0) = {buttons[0]?.Name}  (0,1) = {buttons[1]?.Name}");
@@ -160,7 +247,11 @@ public partial class MenuControls : Control
         }
         else
         {
-            GD.PrintErr($"[MenuControls] Expected 4 buttons for 2x2 grid, found {buttons.Count}");
+            GD.Print($"[MenuControls] Generic layout with {buttons.Count} buttons:");
+            for (int i = 0; i < buttons.Count; i++)
+            {
+                GD.Print($"  [{i}] = {buttons[i]?.Name}");
+            }
         }
     }
     
