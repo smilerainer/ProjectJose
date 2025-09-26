@@ -18,11 +18,22 @@ public partial class CentralInputManager : Node2D
     [Export] private Vector2 cursorOffset = Vector2.Zero;
     [Export] private bool enableCursor = true;
     [Export] private float cursorSmoothness = 8f;
+    [Export] private Vector2 uiCursorOffset = Vector2.Zero;
+    [Export] private bool enableDebugTabCycling = false;
+    [Export] private bool enableVerboseDebug = true; // Add this for detailed logging
+    [Export] private bool debugCursorPositioning = true; // Specific cursor debug flag
 
     private InputContext currentContext = InputContext.None;
     private List<MenuControls> menuControls = new();
     private List<HexControls> hexControls = new();
     private List<NovelControls> novelControls = new();
+    
+    // MenuControls spatial grid navigation
+    private MenuControls[,] menuSpatialGrid;
+    private Dictionary<MenuControls, Vector2I> menuGridPositions = new();
+    private int gridWidth = 0;
+    private int gridHeight = 0;
+    private Vector2I currentGridPosition = Vector2I.Zero;
 
     private TextureRect cursorDisplay;
     private Vector2 targetCursorPosition = Vector2.Zero;
@@ -35,8 +46,13 @@ public partial class CentralInputManager : Node2D
 
     public override void _Ready()
     {
+        // Set HIGHEST priority to intercept inputs first
+        ProcessPriority = -10000; // Much higher priority
+        
         InitializeInputManager();
         SetupCursorDisplay();
+        
+        GD.Print($"[InputManager] _Ready complete - ProcessPriority: {ProcessPriority}");
     }
 
     public override void _Process(double delta)
@@ -45,10 +61,33 @@ public partial class CentralInputManager : Node2D
         UpdateCursorPosition(delta);
     }
 
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        // Try _UnhandledInput as backup - this runs AFTER other nodes have processed
+        if (enableDebugTabCycling && @event.IsActionPressed("ui_focus_next"))
+        {
+            if (enableVerboseDebug)
+                GD.Print("[InputManager] _UnhandledInput: Tab detected as UNHANDLED - intercepting!");
+            
+            GetViewport().SetInputAsHandled();
+            CycleDebugMenuFocus();
+        }
+    }
+
     public override void _Input(InputEvent @event)
     {
+        // Only log Tab key, not every input
+        if (enableDebugTabCycling && @event.IsActionPressed("ui_focus_next"))
+        {
+            if (enableVerboseDebug)
+                GD.Print("[InputManager] _Input: Tab detected - attempting to handle!");
+            
+            GetViewport().SetInputAsHandled();
+            CycleDebugMenuFocus();
+            return;
+        }
+        
         if (currentContext == InputContext.None) return;
-
         RouteInputToActiveControl(@event);
     }
 
@@ -119,12 +158,9 @@ public partial class CentralInputManager : Node2D
     private List<Node> FindActiveControls()
     {
         var activeControls = new List<Node>();
-
-        // Check all registered controls for activity
         activeControls.AddRange(menuControls.Where(m => m.IsActive));
         activeControls.AddRange(hexControls.Where(h => h.IsActive));
         activeControls.AddRange(novelControls.Where(n => n.IsActive));
-
         return activeControls;
     }
 
@@ -147,14 +183,13 @@ public partial class CentralInputManager : Node2D
 
     private void SetMixedContext(List<Node> activeControls)
     {
-        // Determine priority - Novel > Menu > HexGrid
         var priorityControl = FindHighestPriorityControl(activeControls);
         SetContextAndControl(InputContext.Mixed, priorityControl);
     }
 
     private Node FindHighestPriorityControl(List<Node> controls)
     {
-        // Priority order: NovelControls > MenuControls > HexControls
+        // Priority: Novel > Menu > Hex
         return controls.FirstOrDefault(c => c is NovelControls) ??
                controls.FirstOrDefault(c => c is MenuControls) ??
                controls.FirstOrDefault(c => c is HexControls);
@@ -202,11 +237,15 @@ public partial class CentralInputManager : Node2D
     {
         Vector2I direction = Vector2I.Zero;
 
-        if (@event.IsActionPressed("ui_up")) direction = new Vector2I(0, -1);
-        else if (@event.IsActionPressed("ui_down")) direction = new Vector2I(0, 1);
-        else if (@event.IsActionPressed("ui_left")) direction = new Vector2I(-1, 0);
-        else if (@event.IsActionPressed("ui_right")) direction = new Vector2I(1, 0);
-        else if (@event.IsActionPressed("ui_accept"))
+        if (@event.IsActionPressed("ui_up") || IsKeyPressed(@event, Key.W)) 
+            direction = new Vector2I(0, -1);
+        else if (@event.IsActionPressed("ui_down") || IsKeyPressed(@event, Key.S)) 
+            direction = new Vector2I(0, 1);
+        else if (@event.IsActionPressed("ui_left") || IsKeyPressed(@event, Key.A)) 
+            direction = new Vector2I(-1, 0);
+        else if (@event.IsActionPressed("ui_right") || IsKeyPressed(@event, Key.D)) 
+            direction = new Vector2I(1, 0);
+        else if (@event.IsActionPressed("ui_accept") || IsKeyPressed(@event, Key.Space) || IsKeyPressed(@event, Key.Enter))
         {
             menu.ActivateCurrentButton();
             return;
@@ -219,28 +258,14 @@ public partial class CentralInputManager : Node2D
         }
     }
 
+    private bool IsKeyPressed(InputEvent @event, Key key)
+    {
+        return @event is InputEventKey keyEvent && keyEvent.Pressed && keyEvent.Keycode == key;
+    }
+
     private void HandleHexInput(HexControls hex, InputEvent @event)
     {
-        // // Mouse input (TODO: FIX PROTECTION LEVEL)
-        // if (@event is InputEventMouseButton mouseButton && mouseButton.Pressed)
-        // {
-        //     if (mouseButton.ButtonIndex == MouseButton.Left)
-        //     {
-        //         hex.HandleMouseInput(@event);
-        //         UpdateCursorTarget();
-        //     }
-        // }
-        // else if (@event is InputEventMouseMotion && hex.enableDebugHover)
-        // {
-        //     hex.HandleMouseInput(@event);
-        // }
-
-        // // Keyboard input (if debug WASD is enabled)
-        // if (hex.enableDebugWASD)
-        // {
-        //     hex.HandleKeyboardInput(@event);
-        //     UpdateCursorTarget();
-        // }
+        // TODO: Implement hex input handling when needed
     }
 
     private void HandleNovelInput(NovelControls novel, InputEvent @event)
@@ -251,7 +276,6 @@ public partial class CentralInputManager : Node2D
             if (novel.IsShowingChoices)
             {
                 // TODO: Handle choice selection when implemented
-                // novel.MakeChoice(0);
             }
             else
             {
@@ -279,13 +303,18 @@ public partial class CentralInputManager : Node2D
 
     private void InitializeInputManager()
     {
-        // Auto-discover existing controls in scene
         AutoDiscoverControls();
-
-        // Set high processing priority
-        ProcessPriority = -1000;
-
-        GD.Print("[InputManager] Initialized");
+        
+        // Ensure we have the highest processing priority
+        ProcessPriority = -10000;
+        
+        // Make sure we're in the scene tree early
+        SetProcessInput(true);
+        SetProcessUnhandledInput(true);
+        
+        GD.Print($"[InputManager] Initialized - ProcessPriority: {ProcessPriority}");
+        GD.Print($"[InputManager] ProcessInput: {IsProcessingInput()}, ProcessUnhandledInput: {IsProcessingUnhandledInput()}");
+        GD.Print($"[InputManager] Debug tab cycling enabled: {enableDebugTabCycling}");
     }
 
     private void AutoDiscoverControls()
@@ -294,190 +323,406 @@ public partial class CentralInputManager : Node2D
         if (sceneRoot == null) return;
 
         DiscoverControlsRecursively(sceneRoot);
+        BuildMenuSpatialGrid();
 
         GD.Print($"[InputManager] Auto-discovered: {menuControls.Count} menus, {hexControls.Count} hex, {novelControls.Count} novels");
+    }
+    
+    private void BuildMenuSpatialGrid()
+    {
+        if (menuControls.Count == 0) return;
+        
+        // Get all menu positions and sort them spatially
+        var menuPositions = menuControls
+            .Select(menu => new { Menu = menu, Position = menu.GlobalPosition })
+            .OrderBy(mp => mp.Position.Y) // Top to bottom first
+            .ThenBy(mp => mp.Position.X)  // Left to right second
+            .ToList();
+
+        // Group menus by Y position (with tolerance for slight misalignment)
+        const float yTolerance = 50f; // Adjust based on your UI layout
+        var rows = new List<List<MenuControls>>();
+        
+        foreach (var menuPos in menuPositions)
+        {
+            var existingRow = rows.FirstOrDefault(row => 
+                Mathf.Abs(row[0].GlobalPosition.Y - menuPos.Position.Y) <= yTolerance);
+            
+            if (existingRow != null)
+            {
+                existingRow.Add(menuPos.Menu);
+            }
+            else
+            {
+                rows.Add(new List<MenuControls> { menuPos.Menu });
+            }
+        }
+
+        // Sort each row by X position (left to right)
+        foreach (var row in rows)
+        {
+            row.Sort((a, b) => a.GlobalPosition.X.CompareTo(b.GlobalPosition.X));
+        }
+
+        // Calculate grid dimensions
+        gridHeight = rows.Count;
+        gridWidth = rows.Max(row => row.Count);
+        
+        // Create 2D grid and position mapping
+        menuSpatialGrid = new MenuControls[gridWidth, gridHeight];
+        menuGridPositions.Clear();
+        
+        for (int y = 0; y < gridHeight; y++)
+        {
+            for (int x = 0; x < rows[y].Count; x++)
+            {
+                var menu = rows[y][x];
+                menuSpatialGrid[x, y] = menu;
+                menuGridPositions[menu] = new Vector2I(x, y);
+            }
+        }
+
+        // Debug output
+        GD.Print($"[InputManager] Built {gridWidth}x{gridHeight} menu spatial grid:");
+        for (int y = 0; y < gridHeight; y++)
+        {
+            var rowMenus = new List<string>();
+            for (int x = 0; x < gridWidth; x++)
+            {
+                var menu = menuSpatialGrid[x, y];
+                rowMenus.Add(menu?.Name ?? "null");
+            }
+            GD.Print($"  Row {y}: [{string.Join(", ", rowMenus)}]");
+        }
+        
+        // Start at the first available position
+        currentGridPosition = Vector2I.Zero;
+        EnsureValidGridPosition();
+    }
+    
+    private MenuControls GetMenuAtGridPosition(Vector2I pos)
+    {
+        if (pos.X < 0 || pos.X >= gridWidth || pos.Y < 0 || pos.Y >= gridHeight)
+            return null;
+        return menuSpatialGrid[pos.X, pos.Y];
+    }
+    
+    private void EnsureValidGridPosition()
+    {
+        // Make sure we're pointing to a valid menu, wrap around if needed
+        int attempts = 0;
+        int maxAttempts = gridWidth * gridHeight;
+        
+        while (GetMenuAtGridPosition(currentGridPosition) == null && attempts < maxAttempts)
+        {
+            MoveToNextGridPosition();
+            attempts++;
+        }
+        
+        if (attempts >= maxAttempts)
+        {
+            GD.PrintErr("[InputManager] No valid grid positions found!");
+            currentGridPosition = Vector2I.Zero;
+        }
+    }
+    
+    private void MoveToNextGridPosition()
+    {
+        currentGridPosition.X++;
+        if (currentGridPosition.X >= gridWidth)
+        {
+            currentGridPosition.X = 0;
+            currentGridPosition.Y++;
+            if (currentGridPosition.Y >= gridHeight)
+            {
+                currentGridPosition.Y = 0;
+            }
+        }
+    }
+    
+    private void CycleDebugMenuFocus()
+    {
+        GD.Print("=== CycleDebugMenuFocus CALLED ===");
+        
+        if (menuSpatialGrid == null || gridWidth == 0 || gridHeight == 0) 
+        {
+            GD.PrintErr("[InputManager] No menu spatial grid available!");
+            return;
+        }
+        
+        GD.Print($"[InputManager] BEFORE - Active menus:");
+        foreach (var menu in menuControls)
+        {
+            if (menu.IsActive)
+                GD.Print($"  - {menu.Name} is ACTIVE");
+        }
+        
+        GD.Print($"[InputManager] Current grid position: {currentGridPosition}");
+        
+        // Deactivate all menus
+        foreach (var menu in menuControls)
+        {
+            if (menu.IsActive)
+            {
+                GD.Print($"[InputManager] Deactivating menu: {menu.Name}");
+                menu.SetActive(false);
+            }
+        }
+        
+        // Move to next position in grid
+        var oldPosition = currentGridPosition;
+        MoveToNextGridPosition();
+        EnsureValidGridPosition();
+        
+        GD.Print($"[InputManager] Moved from {oldPosition} to {currentGridPosition}");
+        
+        // Activate the new menu and reset it to 0,0 button
+        var newMenu = GetMenuAtGridPosition(currentGridPosition);
+        if (newMenu != null)
+        {
+            GD.Print($"[InputManager] Activating menu: {newMenu.Name} at grid position {currentGridPosition}");
+            newMenu.SetActive(true);
+            
+            // Reset the menu to its 0,0 button position (if method exists)
+            if (newMenu.HasMethod("ResetToFirstButton"))
+            {
+                newMenu.Call("ResetToFirstButton");
+                GD.Print($"[InputManager] Reset {newMenu.Name} to first button");
+            }
+            else
+            {
+                GD.Print($"[InputManager] WARNING: {newMenu.Name} does not have ResetToFirstButton method");
+            }
+            
+            UpdateCursorTarget(); // Update cursor to new position
+        }
+        else
+        {
+            GD.PrintErr($"[InputManager] CRITICAL: No menu found at grid position {currentGridPosition}!");
+        }
+        
+        GD.Print($"[InputManager] AFTER - Active menus:");
+        foreach (var menu in menuControls)
+        {
+            if (menu.IsActive)
+                GD.Print($"  - {menu.Name} is NOW ACTIVE");
+        }
+        
+        GD.Print("=== CycleDebugMenuFocus COMPLETE ===");
+    }
+    
+    public void RefreshUILayout()
+    {
+        GD.Print("[InputManager] Refreshing UI layout...");
+        BuildMenuSpatialGrid();
+        
+        // If there was an active menu, try to keep it active
+        var currentActiveMenu = currentActiveControl as MenuControls;
+        if (currentActiveMenu != null && menuGridPositions.ContainsKey(currentActiveMenu))
+        {
+            currentGridPosition = menuGridPositions[currentActiveMenu];
+            GD.Print($"[InputManager] Maintained focus on {currentActiveMenu.Name} at position {currentGridPosition}");
+        }
+        else
+        {
+            // Start fresh at first valid position
+            currentGridPosition = Vector2I.Zero;
+            EnsureValidGridPosition();
+        }
+    }
+    
+    // Call this when a MenuControls changes its button focus
+    public void NotifyButtonFocusChanged()
+    {
+        // Force immediate cursor update
+        UpdateCursorTarget();
+        
+        if (debugCursorPositioning)
+            GD.Print("[CURSOR] Button focus changed - cursor updated");
     }
 
     private void DiscoverControlsRecursively(Node node)
     {
-        // Register controls found in scene
+        if (enableVerboseDebug)
+            GD.Print($"[InputManager] Scanning node: {node.Name} ({node.GetType().Name})");
+        
         switch (node)
         {
             case MenuControls menu:
                 RegisterMenuControl(menu);
+                GD.Print($"[InputManager] ✓ FOUND MenuControls: {menu.Name} ({menu.GetType().Name}) at {menu.GlobalPosition}");
                 break;
             case HexControls hex:
                 RegisterHexControl(hex);
+                GD.Print($"[InputManager] ✓ FOUND HexControls: {hex.Name} ({hex.GetType().Name})");
                 break;
             case NovelControls novel:
                 RegisterNovelControl(novel);
+                GD.Print($"[InputManager] ✓ FOUND NovelControls: {novel.Name} ({novel.GetType().Name})");
+                break;
+            default:
+                // Check if this node has the script attached but isn't being detected
+                if (node.HasMethod("SetActive") && node.HasMethod("IsActive"))
+                {
+                    GD.Print($"[InputManager] ⚠️  Node {node.Name} ({node.GetType().Name}) has menu methods but isn't MenuControls type!");
+                }
                 break;
         }
 
-        // Recurse through children
         foreach (Node child in node.GetChildren())
         {
             DiscoverControlsRecursively(child);
         }
     }
 
+    private void SetupCursorDisplay()
+    {
+        if (!enableCursor || cursorTexture == null) return;
+
+        CreateCursorDisplay();
+        ConfigureCursorProperties();
+    }
+
+    private void CreateCursorDisplay()
+    {
+        // Try to find UI layer first
+        var uiLayer = GetTree().CurrentScene.GetNodeOrNull<CanvasLayer>("UI");
+        
+        cursorDisplay = new TextureRect
+        {
+            Texture = cursorTexture,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            ZIndex = 2000
+        };
+
+        if (uiLayer != null)
+        {
+            uiLayer.AddChild(cursorDisplay);
+            GD.Print("[InputManager] Created cursor on UI layer");
+        }
+        else
+        {
+            AddChild(cursorDisplay);
+            GD.Print("[InputManager] Created cursor as direct child");
+        }
+
+        targetCursorPosition = GetViewport().GetMousePosition();
+    }
 
     private void ConfigureCursorProperties()
     {
         if (cursorDisplay == null) return;
 
         cursorDisplay.PivotOffset = cursorOffset;
-        cursorDisplay.TextureFilter = CanvasItem.TextureFilterEnum.Nearest; // Pixel perfect
-    }
-
-    private void HideSystemCursor()
-    {
-        // Does exactly what it says on the tin
-        // Input.SetDefaultCursorShape(Input.CursorShape.Hidden);
+        cursorDisplay.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
     }
 
     private void UpdateCursorPosition(double delta)
     {
         if (cursorDisplay == null) return;
 
-        // Get mouse position as fallback
-        var mousePos = GetViewport().GetMousePosition();
-
-        // Use action position if available, otherwise mouse
         var actionPos = GetCurrentActionPosition();
         if (actionPos != Vector2.Zero)
+        {
             targetCursorPosition = actionPos;
+        }
         else
-            targetCursorPosition = mousePos;
+        {
+            targetCursorPosition = GetViewport().GetMousePosition();
+        }
 
-        // Smooth cursor movement
         var currentPos = cursorDisplay.Position + cursorOffset;
         var newPos = currentPos.Lerp(targetCursorPosition, cursorSmoothness * (float)delta);
-
-        cursorDisplay.Position = newPos.Round() - cursorOffset; // Pixel perfect
+        cursorDisplay.Position = newPos.Round() - cursorOffset;
     }
 
     private Vector2 GetCurrentActionPosition()
     {
-        return currentActiveControl switch
+        var position = currentActiveControl switch
         {
-            MenuControls menu => menu.CurrentButtonPosition,
-            HexControls hex => hex.GetCursorWorldPosition(),
+            MenuControls menu => GetMenuScreenPosition(menu),
+            HexControls hex => GetHexScreenPosition(hex),
             NovelControls novel => novel.CurrentActionPosition,
             _ => Vector2.Zero
         };
+        
+        return position;
+    }
+
+    private Vector2 GetMenuScreenPosition(MenuControls menu)
+    {
+        Vector2 finalPosition = Vector2.Zero;
+        string positionSource = "none";
+        
+        // First, try to get the currently highlighted button's position
+        var currentButton = menu.CurrentButton;
+        if (currentButton != null && currentButton is Control buttonControl)
+        {
+            var buttonRect = buttonControl.GetGlobalRect();
+            finalPosition = buttonRect.Position + uiCursorOffset;
+            positionSource = $"button '{buttonControl.Name}' top-left";
+            
+            if (debugCursorPositioning)
+            {
+                GD.Print($"[CURSOR] Menu '{menu.Name}' -> {positionSource}");
+                GD.Print($"  Button rect: {buttonRect}");
+                GD.Print($"  Final position: {finalPosition} (with offset: {uiCursorOffset})");
+            }
+        }
+        // Fallback: use the menu container's top-left position
+        else if (menu is Control menuControl)
+        {
+            var menuRect = menuControl.GetGlobalRect();
+            finalPosition = menuRect.Position + uiCursorOffset;
+            positionSource = "menu container top-left";
+            
+            if (debugCursorPositioning)
+            {
+                GD.Print($"[CURSOR] Menu '{menu.Name}' -> {positionSource}");
+                GD.Print($"  Menu rect: {menuRect}");
+                GD.Print($"  Final position: {finalPosition} (with offset: {uiCursorOffset})");
+            }
+        }
+        // Final fallback: use global position
+        else
+        {
+            finalPosition = menu.GlobalPosition + uiCursorOffset;
+            positionSource = "global position";
+            
+            if (debugCursorPositioning)
+            {
+                GD.Print($"[CURSOR] Menu '{menu.Name}' -> {positionSource}");
+                GD.Print($"  Global pos: {menu.GlobalPosition}");
+                GD.Print($"  Final position: {finalPosition} (with offset: {uiCursorOffset})");
+            }
+        }
+        
+        return finalPosition;
+    }
+
+    private Vector2 GetHexScreenPosition(HexControls hex)
+    {
+        var hexLocalPos = hex.GetCursorWorldPosition();
+        if (hexLocalPos == Vector2.Zero) return Vector2.Zero;
+
+        var globalWorldPos = hex.ToGlobal(hexLocalPos);
+        var camera = GetViewport().GetCamera2D();
+        if (camera == null) return Vector2.Zero;
+
+        var viewportSize = GetViewport().GetVisibleRect().Size;
+        var screenPos = globalWorldPos - camera.GlobalPosition + viewportSize * 0.5f;
+
+        return screenPos;
     }
 
     private void UpdateCursorTarget()
     {
-        // Force cursor to update to new action position
         var actionPos = GetCurrentActionPosition();
         if (actionPos != Vector2.Zero)
+        {
             targetCursorPosition = actionPos;
+        }
     }
 
     #endregion
-    
-    // Fixed cursor positioning methods for CentralInputManager
-
-
-private Vector2 GetMenuScreenPosition(MenuControls menu)
-{
-    var button = menu.CurrentButton;
-    if (button == null) return Vector2.Zero;
-    
-    // Menu buttons are UI elements - GlobalPosition should be screen coordinates
-    var buttonCenter = button.GlobalPosition + button.Size * 0.5f;
-    GD.Print($"[Cursor] Menu button at: {buttonCenter}, size: {button.Size}");
-    return buttonCenter;
-}
-
-private Vector2 GetHexScreenPosition(HexControls hex)
-{
-    // Get the hex cursor's world position (this should be local to hex)
-    var hexLocalPos = hex.GetCursorWorldPosition();
-    if (hexLocalPos == Vector2.Zero) return Vector2.Zero;
-    
-    // Convert to global world coordinates
-    var globalWorldPos = hex.ToGlobal(hexLocalPos);
-    
-    // Get camera and convert world position to screen position
-    var camera = GetViewport().GetCamera2D();
-    if (camera == null) return Vector2.Zero;
-    
-    // Simple camera-to-screen conversion
-    var viewport = GetViewport();
-    var viewportSize = viewport.GetVisibleRect().Size;
-    var screenPos = globalWorldPos - camera.GlobalPosition + viewportSize * 0.5f;
-    
-    GD.Print($"[Cursor] Hex local: {hexLocalPos}, global: {globalWorldPos}, camera: {camera.GlobalPosition}, screen: {screenPos}");
-    return screenPos;
-}
-
-// Alternative simpler approach for hex positioning
-private Vector2 GetHexScreenPositionSimple(HexControls hex)
-{
-    // Get the camera
-    var camera = GetViewport().GetCamera2D();
-    if (camera == null) return Vector2.Zero;
-    
-    // Get hex cursor position in world coordinates
-    var hexWorldPos = hex.GetCursorWorldPosition();
-    if (hexWorldPos == Vector2.Zero) return Vector2.Zero;
-    
-    // Convert to global position
-    var globalPos = hex.ToGlobal(hexWorldPos);
-    
-    // Project world position to screen using viewport
-    var viewport = GetViewport();
-    var screenPos = globalPos;
-    
-    GD.Print($"[Cursor] Hex world: {hexWorldPos}, global: {globalPos}, screen: {screenPos}");
-    return screenPos;
-}
-
-// Updated cursor display setup to use UI layer
-private void SetupCursorDisplay()
-{
-    if (!enableCursor || cursorTexture == null) return;
-    
-    CreateCursorOnUILayer();
-    ConfigureCursorProperties();
-    HideSystemCursor();
-}
-
-private void CreateCursorOnUILayer()
-{
-    // Find UI canvas layer
-    var uiLayer = GetTree().CurrentScene.GetNodeOrNull<CanvasLayer>("UI");
-    if (uiLayer == null)
-    {
-        // Fallback: create cursor as direct child (current approach)
-        GD.Print("[InputManager] No UI layer found, creating cursor as direct child");
-        CreateCursorSprite();
-        return;
-    }
-    
-    // Create cursor on UI layer for proper Z-ordering
-    cursorDisplay = new TextureRect();
-    cursorDisplay.Texture = cursorTexture;
-    cursorDisplay.MouseFilter = Control.MouseFilterEnum.Ignore;
-    cursorDisplay.ZIndex = 2000; // Above everything
-    
-    uiLayer.AddChild(cursorDisplay);
-    targetCursorPosition = GetViewport().GetMousePosition();
-    
-    GD.Print("[InputManager] Created cursor on UI layer");
-}
-
-private void CreateCursorSprite()
-{
-    cursorDisplay = new TextureRect();
-    cursorDisplay.Texture = cursorTexture;
-    cursorDisplay.MouseFilter = Control.MouseFilterEnum.Ignore;
-    cursorDisplay.ZIndex = 2000; // Above everything
-    AddChild(cursorDisplay);
-    
-    targetCursorPosition = GetViewport().GetMousePosition();
-}
 }

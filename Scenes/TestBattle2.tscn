@@ -7,13 +7,16 @@
 [ext_resource type="PackedScene" uid="uid://ducsxw626vu8p" path="res://Assets/Interface/MenuActions.tscn" id="3_kei0r"]
 
 [node name="TestBattle2" type="Node2D"]
+position = Vector2(1, -2)
 
 [node name="HexGrid" parent="." instance=ExtResource("2_n21b5")]
 
 [node name="CentralInputManager" type="Node2D" parent="."]
+position = Vector2(-3, 2)
 scale = Vector2(2.94759, 1.28409)
 script = ExtResource("3_arbkf")
 cursorTexture = ExtResource("3_ad07i")
+enableDebugTabCycling = true
 
 [node name="BattleManager" type="Node2D" parent="."]
 script = ExtResource("1_kei0r")
@@ -27,6 +30,33 @@ offset_left = 112.0
 offset_top = -62.0
 offset_right = -106.0
 offset_bottom = -30.0
+grow_vertical = 0
+
+[node name="MenuActions2" parent="UI" groups=["ui"] instance=ExtResource("3_kei0r")]
+anchors_preset = 12
+anchor_top = 1.0
+offset_left = 39.0
+offset_top = -62.0
+offset_right = -179.0
+offset_bottom = -30.0
+grow_vertical = 0
+
+[node name="MenuActions3" parent="UI" groups=["ui"] instance=ExtResource("3_kei0r")]
+anchors_preset = 12
+anchor_top = 1.0
+offset_left = 187.0
+offset_top = -62.0
+offset_right = -31.0
+offset_bottom = -30.0
+grow_vertical = 0
+
+[node name="MenuActions4" parent="UI" groups=["ui"] instance=ExtResource("3_kei0r")]
+anchors_preset = 12
+anchor_top = 1.0
+offset_left = 187.0
+offset_top = -97.0
+offset_right = -31.0
+offset_bottom = -65.0
 grow_vertical = 0
 
 [node name="CodeTest" type="Node2D" parent="."]
