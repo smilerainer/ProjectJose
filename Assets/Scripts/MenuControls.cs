@@ -1,9 +1,9 @@
-// MenuControls.cs - Dead simple 2x2 grid with cursor integration
+// MenuControls.cs
 using Godot;
 using System.Collections.Generic;
 using System.Linq;
 
-public partial class MenuControls : Control
+public partial class MenuControls : Container
 {
     [Signal] public delegate void ButtonSelectedEventHandler(int index, BaseButton button);
     [Signal] public delegate void ButtonActivatedEventHandler(int index, BaseButton button);
@@ -19,11 +19,6 @@ public partial class MenuControls : Control
     private int currentCol = 0;
     private bool isActive = false;
     private CentralInputManager inputManager;
-    
-    // Simple 2x2 grid - buttons[0]=move, buttons[1]=skill, buttons[2]=item, buttons[3]=talk
-    // Grid layout:
-    // [0] [1]  ->  move  skill
-    // [2] [3]  ->  item  talk
     
     public bool IsActive => isActive;
     public BaseButton CurrentButton => GetButtonAt(currentRow, currentCol);
@@ -112,6 +107,123 @@ public partial class MenuControls : Control
         NotifyInputManagerCursorUpdate();
     }
     
+    // Add a button to this menu's container
+    public BaseButton AddButton(string buttonText, string buttonName = "")
+    {
+        if (buttonContainer == null)
+        {
+            GD.PrintErr($"[MenuControls] Cannot add button - no container found in {Name}");
+            return null;
+        }
+        
+        var button = new Button();
+        button.Text = buttonText;
+        button.Name = string.IsNullOrEmpty(buttonName) ? buttonText : buttonName;
+        
+        // Add to container
+        buttonContainer.AddChild(button);
+        
+        // Refresh our button list
+        DiscoverButtons();
+        
+        GD.Print($"[MenuControls] Added button '{button.Name}' with text '{buttonText}' to {Name}");
+        GD.Print($"[MenuControls] Total buttons now: {buttons.Count}");
+        
+        return button;
+    }
+    
+    // Delete a specific button by name
+    public bool DeleteButton(string buttonName)
+    {
+        if (buttonContainer == null)
+        {
+            GD.PrintErr($"[MenuControls] Cannot delete button - no container found in {Name}");
+            return false;
+        }
+        
+        var button = buttons.FirstOrDefault(b => b.Name == buttonName);
+        if (button == null)
+        {
+            GD.PrintErr($"[MenuControls] Button '{buttonName}' not found in {Name}");
+            return false;
+        }
+        
+        // Remove from scene and free memory
+        button.QueueFree();
+        
+        // Refresh our button list
+        DiscoverButtons();
+        
+        GD.Print($"[MenuControls] Deleted button '{buttonName}' from {Name}");
+        GD.Print($"[MenuControls] Total buttons now: {buttons.Count}");
+        
+        return true;
+    }
+    
+    // Delete a button by index
+    public bool DeleteButtonAt(int index)
+    {
+        if (index < 0 || index >= buttons.Count)
+        {
+            GD.PrintErr($"[MenuControls] Button index {index} out of range (0-{buttons.Count - 1}) in {Name}");
+            return false;
+        }
+        
+        var button = buttons[index];
+        return DeleteButton(button.Name);
+    }
+    
+    // Clear all buttons from the container
+    public void ClearAllButtons()
+    {
+        if (buttonContainer == null)
+        {
+            GD.PrintErr($"[MenuControls] Cannot clear buttons - no container found in {Name}");
+            return;
+        }
+        
+        // Remove all button children immediately, not with QueueFree()
+        foreach (var button in buttons.ToList()) // ToList() to avoid modification during iteration
+        {
+            button.GetParent()?.RemoveChild(button);
+            button.QueueFree(); // Still queue for memory cleanup
+        }
+        
+        // Clear our list immediately since nodes are removed from tree
+        buttons.Clear();
+        
+        GD.Print($"[MenuControls] Cleared all buttons from {Name}");
+    }
+    // Set buttons from a text array - wipes existing and creates new ones
+    public void SetButtonsFromArray(string[] buttonTexts)
+    {
+        if (buttonTexts == null || buttonTexts.Length == 0)
+        {
+            GD.PrintErr($"[MenuControls] Cannot set buttons - array is null or empty");
+            return;
+        }
+        
+        GD.Print($"[MenuControls] Setting {buttonTexts.Length} buttons from array in {Name}");
+        
+        // Step 1: Clear all existing buttons
+        ClearAllButtons();
+        
+        // Step 2: Add new buttons from array
+        for (int i = 0; i < buttonTexts.Length; i++)
+        {
+            var buttonText = buttonTexts[i];
+            var buttonName = $"ArrayButton_{i}";
+            AddButton(buttonText, buttonName);
+        }
+        
+        // Reset to first button
+        currentRow = 0;
+        currentCol = 0;
+        ApplySelection();
+        
+        GD.Print($"[MenuControls] Successfully set {buttons.Count} buttons from array");
+    }
+    
     #endregion
 
     #region Cursor Integration
@@ -167,36 +279,18 @@ public partial class MenuControls : Control
     
     private void NotifyInputManagerCursorUpdate()
     {
-        // Enhanced debug output to track cursor updates
+        // Simplified debug output - only show when actually changing buttons
         var currentButton = CurrentButton;
-        GD.Print($"[MenuControls] {Name} NotifyInputManagerCursorUpdate called");
-        GD.Print($"  Current position: ({currentRow}, {currentCol})");
-        GD.Print($"  Current button: {currentButton?.Name ?? "NULL"}");
-        if (currentButton != null && currentButton is Control buttonControl)
-        {
-            GD.Print($"  Button global rect: {buttonControl.GetGlobalRect()}");
-            GD.Print($"  Button global position: {buttonControl.GlobalPosition}");
-        }
         
         if (inputManager != null)
         {
-            GD.Print($"  ✅ Calling inputManager.NotifyButtonFocusChanged()");
             inputManager.NotifyButtonFocusChanged();
         }
         else
         {
-            GD.Print($"  ❌ InputManager is NULL - trying to find it again");
             // Try to find it again if it wasn't found before
             FindInputManager();
-            if (inputManager != null)
-            {
-                GD.Print($"  ✅ Found InputManager on retry - calling NotifyButtonFocusChanged()");
-                inputManager.NotifyButtonFocusChanged();
-            }
-            else
-            {
-                GD.Print($"  ❌ Still no InputManager found");
-            }
+            inputManager?.NotifyButtonFocusChanged();
         }
     }
     
@@ -257,20 +351,9 @@ public partial class MenuControls : Control
     
     private void FindButtonContainer()
     {
-        var candidates = new[] { "VBoxContainer", "HBoxContainer", "ButtonContainer", "Buttons", "FlowContainer" };
-        
-        foreach (var name in candidates)
-        {
-            buttonContainer = GetNodeOrNull<Container>(name);
-            if (buttonContainer != null) return;
-        }
-        
-        buttonContainer = GetChildren().OfType<Container>().FirstOrDefault();
-        
-        if (buttonContainer == null)
-        {
-            GD.PrintErr($"[MenuControls] No button container found in {Name}");
-        }
+        // Since MenuControls now inherits from VBoxContainer, it IS the container
+        buttonContainer = this;
+        GD.Print($"[MenuControls] Using self as button container: {Name}");
     }
     
     private void DiscoverButtons()

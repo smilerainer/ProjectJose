@@ -42,14 +42,14 @@ script = ExtResource("2_104n5")
 [node name="HBoxContainer" type="HBoxContainer" parent="UI/VBoxContainer"]
 layout_mode = 2
 
-[node name="Button" type="Button" parent="UI/VBoxContainer/HBoxContainer"]
+[node name="Move" type="Button" parent="UI/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 size_flags_horizontal = 6
 size_flags_vertical = 4
 text = "Move"
 
-[node name="Button2" type="Button" parent="UI/VBoxContainer/HBoxContainer"]
+[node name="Skill" type="Button" parent="UI/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 size_flags_horizontal = 6
@@ -60,14 +60,14 @@ text = "Skill
 [node name="HBoxContainer2" type="HBoxContainer" parent="UI/VBoxContainer"]
 layout_mode = 2
 
-[node name="Button3" type="Button" parent="UI/VBoxContainer/HBoxContainer2"]
+[node name="Item" type="Button" parent="UI/VBoxContainer/HBoxContainer2"]
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 size_flags_horizontal = 6
 size_flags_vertical = 4
 text = "Item"
 
-[node name="Button4" type="Button" parent="UI/VBoxContainer/HBoxContainer2"]
+[node name="Talk" type="Button" parent="UI/VBoxContainer/HBoxContainer2"]
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 size_flags_horizontal = 6
