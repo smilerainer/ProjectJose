@@ -41,6 +41,7 @@ public partial class BattleManager : Node
     [Export] private string configFilePath = "res://data/battle_config.json";
     private BattleConfigData battleConfig;
     private Dictionary<string, ActionConfig> allActions = new();
+    private bool configLoadedSuccessfully = false; // Track config loading
     
     #endregion
     
@@ -70,25 +71,43 @@ public partial class BattleManager : Node
     {
         GD.Print($"[Battle] Loading configuration from: {configFilePath}");
         
-        battleConfig = CustomJsonLoader.LoadBattleConfig(configFilePath);
-        
-        // Build lookup dictionary for all actions
-        allActions.Clear();
-        
-        foreach (var skill in battleConfig.Skills)
-            allActions[skill.Id] = skill;
-        foreach (var item in battleConfig.Items)
-            allActions[item.Id] = item;
-        foreach (var talk in battleConfig.TalkOptions)
-            allActions[talk.Id] = talk;
-        foreach (var move in battleConfig.MoveOptions)
-            allActions[move.Id] = move;
+        try
+        {
+            battleConfig = CustomJsonLoader.LoadBattleConfig(configFilePath);
             
-        GD.Print($"[Battle] Loaded {allActions.Count} total actions:");
-        GD.Print($"  Skills: {battleConfig.Skills.Count}");
-        GD.Print($"  Items: {battleConfig.Items.Count}");
-        GD.Print($"  Talk Options: {battleConfig.TalkOptions.Count}");
-        GD.Print($"  Move Options: {battleConfig.MoveOptions.Count}");
+            if (battleConfig != null)
+            {
+                configLoadedSuccessfully = true;
+                
+                // Build lookup dictionary for all actions
+                allActions.Clear();
+                
+                foreach (var skill in battleConfig.Skills)
+                    allActions[skill.Id] = skill;
+                foreach (var item in battleConfig.Items)
+                    allActions[item.Id] = item;
+                foreach (var talk in battleConfig.TalkOptions)
+                    allActions[talk.Id] = talk;
+                foreach (var move in battleConfig.MoveOptions)
+                    allActions[move.Id] = move;
+                    
+                GD.Print($"[Battle] ✓ Configuration loaded successfully! {allActions.Count} total actions:");
+                GD.Print($"  Skills: {battleConfig.Skills.Count}");
+                GD.Print($"  Items: {battleConfig.Items.Count}");
+                GD.Print($"  Talk Options: {battleConfig.TalkOptions.Count}");
+                GD.Print($"  Move Options: {battleConfig.MoveOptions.Count}");
+            }
+            else
+            {
+                GD.PrintErr("[Battle] ✗ battleConfig is null after loading!");
+                configLoadedSuccessfully = false;
+            }
+        }
+        catch (System.Exception e)
+        {
+            GD.PrintErr($"[Battle] ✗ Failed to load configuration: {e.Message}");
+            configLoadedSuccessfully = false;
+        }
     }
     
     private void DelayedStartPlayerTurn()
@@ -177,7 +196,7 @@ public partial class BattleManager : Node
                 new Callable(this, nameof(EnsureMenuFocus)), (uint)ConnectFlags.OneShot);
         }
         
-        GD.Print("[Battle] Player turn started - select action type");
+        GD.Print($"[Battle] Player turn started - select action type (Config loaded: {configLoadedSuccessfully})");
     }
     
     private void EnsureMenuFocus()
@@ -226,6 +245,15 @@ public partial class BattleManager : Node
     private void HandleMainMenuSelection(BaseButton button)
     {
         string buttonText = button.Name.ToString().ToLower();
+        
+        GD.Print($"[Battle] HandleMainMenuSelection - Button: {buttonText}, Config loaded: {configLoadedSuccessfully}");
+        
+        if (!configLoadedSuccessfully)
+        {
+            GD.PrintErr("[Battle] Cannot proceed - configuration not loaded properly!");
+            StartPlayerTurn();
+            return;
+        }
         
         if (buttonText.Contains("move"))
         {
@@ -440,7 +468,11 @@ public partial class BattleManager : Node
 
     private void StartCellInteraction()
     {
+        GD.Print($"[Battle] ═══ StartCellInteraction ENTRY ═══");
         GD.Print($"[Battle] Starting cell interaction for {currentSubmenuType}: {selectedActionOption}");
+        GD.Print($"[Battle] Config loaded: {configLoadedSuccessfully}");
+        GD.Print($"[Battle] HexControls reference: {(hexControls != null ? "Valid" : "NULL")}");
+        GD.Print($"[Battle] HexGrid reference: {(hexGrid != null ? "Valid" : "NULL")}");
 
         currentPhase = ActionPhase.TargetSelection;
         
@@ -448,6 +480,7 @@ public partial class BattleManager : Node
         {
             menuControls.ReleaseFocus();
             menuControls.SetActive(false);
+            GD.Print("[Battle] Menu deactivated and focus released");
         }
 
         targetSelectionModeActive = true;
@@ -455,32 +488,65 @@ public partial class BattleManager : Node
         var actionConfig = GetActionConfig(selectedActionOption);
         if (actionConfig == null)
         {
-            GD.PrintErr($"[Battle] Action config not found for: {selectedActionOption}");
+            GD.PrintErr($"[Battle] ✗ Action config not found for: {selectedActionOption}");
+            GD.PrintErr($"[Battle] Available actions: [{string.Join(", ", allActions.Keys)}]");
             StartPlayerTurn();
             return;
         }
         
-        GD.Print($"[Battle] Action config loaded - Range: {actionConfig.Range}, TargetType: {actionConfig.TargetType}");
-        GD.Print($"[Battle] Range pattern: {actionConfig.RangePattern.Count} cells, AOE pattern: {actionConfig.AoePattern.Count} cells");
+        GD.Print($"[Battle] ✓ Action config loaded successfully!");
+        GD.Print($"[Battle] Action details:");
+        GD.Print($"  - Name: {actionConfig.Name}");
+        GD.Print($"  - Description: {actionConfig.Description}");
+        GD.Print($"  - Range: {actionConfig.Range}");
+        GD.Print($"  - TargetType: {actionConfig.TargetType}");
+        GD.Print($"  - Range pattern cells: {actionConfig.RangePattern.Count}");
+        GD.Print($"  - AOE pattern cells: {actionConfig.AoePattern.Count}");
         
         var validTargets = CalculateValidTargets(actionConfig);
+        GD.Print($"[Battle] ✓ Calculated {validTargets.Count} valid targets: [{string.Join(", ", validTargets)}]");
         
         if (hexGrid != null)
         {
             hexGrid.ShowRangeHighlight(validTargets);
+            GD.Print("[Battle] ✓ Range highlight set on HexGrid");
+        }
+        else
+        {
+            GD.PrintErr("[Battle] ✗ Cannot set range highlight - HexGrid is null");
         }
         
         if (hexControls != null)
         {
+            GD.Print("[Battle] ═══ CONFIGURING HEXCONTROLS ═══");
+            
             hexControls.SetActive(true);
+            GD.Print($"[Battle] ✓ HexControls activated");
+            
             hexControls.SetValidCells(validTargets.ToHashSet());
+            GD.Print($"[Battle] ✓ Valid cells set: {validTargets.Count} cells");
             
             var aoePattern = actionConfig.AoePattern.Select(p => p.ToVector2I()).ToList();
             hexControls.SetTargetingInfo(actionConfig.TargetType, aoePattern);
+            GD.Print($"[Battle] ✓ Targeting info set - Type: {actionConfig.TargetType}, AOE: {aoePattern.Count} cells");
             
             hexControls.EnterInteractionMode();
+            GD.Print($"[Battle] ✓ EnterInteractionMode called");
+            
+            // Verify HexControls state after setup
+            GD.Print($"[Battle] HexControls verification:");
+            GD.Print($"  - IsActive: {hexControls.IsActive}");
+            GD.Print($"  - IsInInteractionMode: {hexControls.IsInInteractionMode}");
+            GD.Print($"  - CursorPosition: {hexControls.CursorPosition}");
+        }
+        else
+        {
+            GD.PrintErr("[Battle] ✗ Cannot configure interaction - HexControls is null");
+            StartPlayerTurn();
+            return;
         }
         
+        GD.Print($"[Battle] ═══ StartCellInteraction COMPLETE ═══");
         GD.Print($"[Battle] Cell interaction ready - {validTargets.Count} valid targets");
     }
     
@@ -489,11 +555,14 @@ public partial class BattleManager : Node
         var validTargets = new List<Vector2I>();
         var rangePattern = actionConfig.RangePattern.Select(p => p.ToVector2I()).ToList();
         
-        GD.Print($"[Battle] Calculating valid targets from player position {playerPosition}");
+        GD.Print($"[Battle] ═══ CALCULATING VALID TARGETS ═══");
+        GD.Print($"[Battle] Player position: {playerPosition}");
+        GD.Print($"[Battle] Raw range pattern: [{string.Join(", ", actionConfig.RangePattern.Select(p => $"({p.X},{p.Y})"))}]");
+        GD.Print($"[Battle] Converted range pattern: [{string.Join(", ", rangePattern)}]");
         
         if (rangePattern.Count == 0)
         {
-            GD.Print("[Battle] No range pattern defined, using default adjacent pattern");
+            GD.Print("[Battle] ⚠ No range pattern defined, using default adjacent pattern");
             rangePattern = new List<Vector2I>
             {
                 new(1, 0), new(-1, 0), new(0, 1), new(0, -1), new(1, -1), new(-1, -1)
@@ -504,6 +573,8 @@ public partial class BattleManager : Node
         {
             var targetCell = playerPosition + offset;
             
+            GD.Print($"[Battle] Checking offset {offset} -> target cell {targetCell}");
+            
             if (hexGrid != null && hexGrid.IsValidCell(targetCell))
             {
                 bool canTarget = CanTargetCell(targetCell, actionConfig.TargetType);
@@ -511,53 +582,71 @@ public partial class BattleManager : Node
                 if (canTarget)
                 {
                     validTargets.Add(targetCell);
-                    GD.Print($"[Battle] Valid target: {targetCell} (offset {offset})");
+                    GD.Print($"[Battle] ✓ Valid target: {targetCell} (offset {offset})");
                 }
                 else
                 {
-                    GD.Print($"[Battle] Invalid target: {targetCell} (blocked by targeting rules)");
+                    GD.Print($"[Battle] ✗ Invalid target: {targetCell} (blocked by targeting rules for {actionConfig.TargetType})");
                 }
             }
             else
             {
-                GD.Print($"[Battle] Invalid target: {targetCell} (off grid or invalid)");
+                GD.Print($"[Battle] ✗ Invalid target: {targetCell} (off grid or invalid cell)");
             }
         }
         
+        // Check self-targeting
         if (hexGrid != null && hexGrid.CanTargetSelf(actionConfig.TargetType))
         {
             if (!validTargets.Contains(playerPosition))
             {
                 validTargets.Add(playerPosition);
-                GD.Print($"[Battle] Added self-target: {playerPosition}");
+                GD.Print($"[Battle] ✓ Added self-target: {playerPosition}");
             }
         }
+        else
+        {
+            GD.Print($"[Battle] ⚠ Self-targeting not allowed for {actionConfig.TargetType}");
+        }
         
+        GD.Print($"[Battle] ═══ CALCULATION COMPLETE ═══");
+        GD.Print($"[Battle] Final valid targets: [{string.Join(", ", validTargets)}]");
         return validTargets;
     }
     
     private bool CanTargetCell(Vector2I cell, string targetType)
     {
+        GD.Print($"[Battle] CanTargetCell({cell}, {targetType})");
+        
         switch (targetType.ToLower())
         {
             case "self":
-                return cell == playerPosition;
+                bool isSelf = cell == playerPosition;
+                GD.Print($"[Battle] Self target check: {isSelf}");
+                return isSelf;
                 
             case "ally":
-                return cell == playerPosition;
+                bool isAlly = cell == playerPosition;
+                GD.Print($"[Battle] Ally target check: {isAlly}");
+                return isAlly;
                 
             case "enemy":
-                return cell == enemyPosition;
+                bool isEnemy = cell == enemyPosition;
+                GD.Print($"[Battle] Enemy target check: {isEnemy} (enemy at {enemyPosition})");
+                return isEnemy;
                 
             case "movement":
-                return hexGrid != null && !hexGrid.IsOccupiedCell(cell);
+                bool canMoveTo = hexGrid != null && !hexGrid.IsOccupiedCell(cell);
+                GD.Print($"[Battle] Movement target check: {canMoveTo} (occupied: {hexGrid?.IsOccupiedCell(cell)})");
+                return canMoveTo;
                 
             case "area":
             case "any":
+                GD.Print($"[Battle] Area/Any target - always valid");
                 return true;
                 
             default:
-                GD.Print($"[Battle] Unknown target type: {targetType}");
+                GD.Print($"[Battle] ⚠ Unknown target type: {targetType} - defaulting to valid");
                 return true;
         }
     }
@@ -571,9 +660,13 @@ public partial class BattleManager : Node
     
     private void OnCellSelected(Vector2I cell)
     {
-        if (!targetSelectionModeActive) return;
+        if (!targetSelectionModeActive) 
+        {
+            GD.Print($"[Battle] Cell selected but target selection not active: {cell}");
+            return;
+        }
         
-        GD.Print($"[Battle] Cell selected: {cell}");
+        GD.Print($"[Battle] ═══ CELL SELECTED: {cell} ═══");
         
         PrintCellContents(cell);
         
@@ -591,7 +684,7 @@ public partial class BattleManager : Node
     
     private void ShowAoeEffect(Vector2I targetCell, ActionConfig actionConfig)
     {
-        GD.Print($"=== AOE EFFECT AT {targetCell} ===");
+        GD.Print($"═══ AOE EFFECT AT {targetCell} ═══");
         
         var aoePattern = actionConfig.AoePattern.Select(p => p.ToVector2I()).ToList();
         
@@ -684,16 +777,26 @@ public partial class BattleManager : Node
     
     private ActionConfig GetActionConfig(string actionName)
     {
+        GD.Print($"[Battle] GetActionConfig searching for: '{actionName}'");
+        GD.Print($"[Battle] Available actions: [{string.Join(", ", allActions.Select(kvp => $"'{kvp.Key}':'{kvp.Value.Name}'"))}]");
+        
         foreach (var kvp in allActions)
         {
             if (kvp.Value.Name == actionName)
+            {
+                GD.Print($"[Battle] ✓ Found action config: {kvp.Key} -> {kvp.Value.Name}");
                 return kvp.Value;
+            }
         }
+        
+        GD.PrintErr($"[Battle] ✗ Action config not found for: '{actionName}'");
         return null;
     }
     
     private void ExitCellInteraction()
     {
+        GD.Print("[Battle] ═══ EXITING CELL INTERACTION ═══");
+        
         targetSelectionModeActive = false;
         currentPhase = ActionPhase.ActionComplete;
         
@@ -701,15 +804,17 @@ public partial class BattleManager : Node
         {
             hexGrid.ClearRangeHighlight();
             hexGrid.ClearAoePreview();
+            GD.Print("[Battle] ✓ Cleared HexGrid highlights");
         }
         
         if (hexControls != null)
         {
             hexControls.ExitInteractionMode(playerPosition);
             hexControls.SetActive(false);
+            GD.Print("[Battle] ✓ HexControls deactivated and exited interaction mode");
         }
         
-        GD.Print("[Battle] Exited cell interaction");
+        GD.Print("[Battle] ═══ CELL INTERACTION EXIT COMPLETE ═══");
     }
     
     #endregion

@@ -1,10 +1,22 @@
-// HexControls.cs - Hex input and interaction management with clear separation
+// HexControls.cs - Enhanced hex input and interaction management with debug toggle
 using Godot;
 using System.Linq;
 using System.Collections.Generic;
 
 public partial class HexControls : Node2D
 {
+    #region Debug Configuration
+    
+    [Export] private bool enableDebugLogs = true; // Toggle for debug messages
+    
+    private void DebugLog(string message)
+    {
+        if (enableDebugLogs)
+            GD.Print($"[HexControls] {message}");
+    }
+    
+    #endregion
+
     #region Signals
 
     [Signal] public delegate void InteractionCancelledEventHandler();
@@ -27,11 +39,13 @@ public partial class HexControls : Node2D
     #region State
 
     private Vector2I cursorPosition = Vector2I.Zero;
+    private Vector2I lastCursorPosition = new Vector2I(-999, -999); // Track previous position
     private Vector2I hoverPosition = Vector2I.Zero;
     private bool isActive = false;
     private bool cameraFollowsEnabled = true;
     private bool interactionModeActive = false;
     private HashSet<Vector2I> validCells = new();
+    private HashSet<Vector2I> adjacentToValidCells = new(); // NEW: Track adjacent cells
     private List<Vector2I> currentAoePattern = new();
     private string currentTargetType = "";
     private bool justEnteredInteractionMode = false;
@@ -61,6 +75,25 @@ public partial class HexControls : Node2D
     {
         InitializeComponents();
         SetActive(false);
+        
+        // Add tileset debugging
+        if (cursorLayer != null)
+        {
+            var tileSet = cursorLayer.TileSet;
+            if (tileSet != null)
+            {
+                DebugLog($"TileSet found with {tileSet.GetSourceCount()} sources");
+                for (int i = 0; i < tileSet.GetSourceCount(); i++)
+                {
+                    var source = tileSet.GetSource(i);
+                    DebugLog($"Source {i}: {source?.GetType().Name}");
+                }
+            }
+            else
+            {
+                GD.PrintErr("[HexControls] CursorLayer has no TileSet!");
+            }
+        }
     }
 
     private void InitializeComponents()
@@ -75,21 +108,21 @@ public partial class HexControls : Node2D
             if (hexGrid != null)
             {
                 cursorLayer = hexGrid.GetLayer(CellLayer.Cursor);
-                GD.Print("[HexControls] Using HexGrid's cursor layer");
+                DebugLog("Using HexGrid's cursor layer");
             }
         }
         else
         {
-            GD.Print("[HexControls] Using local cursor layer");
+            DebugLog("Using local cursor layer");
         }
 
         camera ??= GetViewport().GetCamera2D();
         hexGrid ??= GetParent<HexGrid>();
 
         if (camera != null && enableCoordinatePrinting)
-            GD.Print($"[HexControls] Found camera: {camera.Name}");
+            DebugLog($"Found camera: {camera.Name}");
         if (hexGrid != null && enableCoordinatePrinting)
-            GD.Print($"[HexControls] Found HexGrid parent: {hexGrid.Name}");
+            DebugLog($"Found HexGrid parent: {hexGrid.Name}");
         if (cursorLayer == null)
             GD.PrintErr("[HexControls] No cursor layer found!");
     }
@@ -101,6 +134,7 @@ public partial class HexControls : Node2D
     public void SetActive(bool active)
     {
         isActive = active;
+        DebugLog($"SetActive called with: {active}");
         UpdateCursorVisibility();
     }
 
@@ -110,28 +144,35 @@ public partial class HexControls : Node2D
         SetActive(false);
         SetCameraFollow(false);
         FocusOnPosition(focusPosition);
-        GD.Print($"[HexControls] UI-only mode - cursor locked on {focusPosition}");
+        DebugLog($"UI-only mode - cursor locked on {focusPosition}");
     }
 
     public void EnterInteractionMode()
     {
+        DebugLog("EnterInteractionMode called");
         interactionModeActive = true;
         justEnteredInteractionMode = true;
         SetCameraFollow(true);
         SetActive(true);
         cursorPosition = FindPlayerPosition();
+        
+        // Calculate adjacent cells to valid cells
+        CalculateAdjacentToValidCells();
+        
         UpdateCursorVisual();
-        GD.Print($"[HexControls] Entered interaction mode - cursor at {cursorPosition}, valid cells: {validCells.Count}");
+        DebugLog($"Entered interaction mode - cursor at {cursorPosition}, valid cells: {validCells.Count}, adjacent cells: {adjacentToValidCells.Count}");
     }
 
     public void ExitInteractionMode(Vector2I focusPosition)
     {
+        DebugLog("ExitInteractionMode called");
         interactionModeActive = false;
         validCells.Clear();
+        adjacentToValidCells.Clear();
         SetActive(false);
         FocusOnPosition(focusPosition);
         SetCameraFollow(false);
-        GD.Print($"[HexControls] Exited interaction mode - cursor locked on {focusPosition}");
+        DebugLog($"Exited interaction mode - cursor locked on {focusPosition}");
     }
 
     #endregion
@@ -142,10 +183,43 @@ public partial class HexControls : Node2D
     {
         if (!isActive) return;
 
+        // Only clear old cursor if we're actually moving to a different position
+        if (cursorPosition != coord && lastCursorPosition != new Vector2I(-999, -999))
+        {
+            ClearCursorAtPosition(lastCursorPosition);
+        }
+
+        lastCursorPosition = cursorPosition;
         cursorPosition = coord;
+        
         UpdateCursorVisual();
         UpdateCameraPosition();
+        
+        // Show AOE preview if applicable
+        if (interactionModeActive && currentAoePattern.Count > 0)
+        {
+            UpdateAoePreview(cursorPosition);
+        }
+        
         EmitSignal(SignalName.CursorMoved, coord);
+    }
+
+    private void ClearCursorAtPosition(Vector2I position)
+    {
+        if (cursorLayer != null)
+        {
+            var sourceId = cursorLayer.GetCellSourceId(position);
+            if (sourceId != -1)
+            {
+                var atlasCoords = cursorLayer.GetCellAtlasCoords(position);
+                // Only clear cursor tiles (atlas X 0-3), not AOE (atlas X 4+)
+                if (atlasCoords.X < 4)
+                {
+                    cursorLayer.EraseCell(position);
+                    DebugLog($"Cleared cursor at previous position {position}");
+                }
+            }
+        }
     }
 
     public void FocusOnPosition(Vector2I position)
@@ -164,6 +238,12 @@ public partial class HexControls : Node2D
     {
         validCells = cells;
         GD.Print($"[HexControls] SetValidCells called with {cells.Count} cells: [{string.Join(", ", cells)}]");
+        
+        // Recalculate adjacent cells when valid cells change
+        if (interactionModeActive)
+        {
+            CalculateAdjacentToValidCells();
+        }
     }
 
     public void SetTargetingInfo(string targetType, List<Vector2I> aoePattern)
@@ -180,8 +260,75 @@ public partial class HexControls : Node2D
         if (hexGrid != null && currentAoePattern.Count > 0)
         {
             hexGrid.ClearAoePreview();
-            hexGrid.ShowAoePreview(targetCell, currentAoePattern);
+            
+            // Only show AOE if on a valid target
+            var playerPos = FindPlayerPosition();
+            bool isValidTarget = validCells.Contains(targetCell) || (canTargetSelf && targetCell == playerPos);
+            
+            if (isValidTarget)
+            {
+                hexGrid.ShowAoePreview(targetCell, currentAoePattern);
+                // After AOE preview, redraw the cursor to ensure green overrides yellow
+                RedrawCursorOverAoe();
+            }
         }
+    }
+
+    private void RedrawCursorOverAoe()
+    {
+        // Redraw the cursor to ensure it appears on top of any yellow AOE previews
+        var playerPos = FindPlayerPosition();
+        
+        if (validCells.Contains(cursorPosition) || (canTargetSelf && cursorPosition == playerPos))
+        {
+            // Green cursor overrides yellow AOE - use alt_tile 1 for higher priority
+            cursorLayer.SetCell(cursorPosition, 0, new Vector2I(2, 0), 1);
+        }
+        else if (adjacentToValidCells.Contains(cursorPosition))
+        {
+            // Red cursor overrides yellow AOE - use alt_tile 1 for higher priority
+            cursorLayer.SetCell(cursorPosition, 0, new Vector2I(3, 0), 1);
+        }
+    }
+
+    private void CalculateAdjacentToValidCells()
+    {
+        adjacentToValidCells.Clear();
+        
+        if (hexGrid == null || validCells.Count == 0)
+        {
+            GD.Print("[HexControls] No hexGrid or no valid cells - skipping adjacent calculation");
+            return;
+        }
+
+        foreach (var validCell in validCells)
+        {
+            var neighbors = hexGrid.GetAllNeighborsOf(validCell);
+            foreach (var neighbor in neighbors)
+            {
+                // Add if it's not already a valid cell and is on the grid
+                if (!validCells.Contains(neighbor) && hexGrid.IsValidCell(neighbor))
+                {
+                    adjacentToValidCells.Add(neighbor);
+                }
+            }
+        }
+        
+        // Also check player position adjacency if can target self
+        if (canTargetSelf)
+        {
+            var playerPos = FindPlayerPosition();
+            var playerNeighbors = hexGrid.GetAllNeighborsOf(playerPos);
+            foreach (var neighbor in playerNeighbors)
+            {
+                if (!validCells.Contains(neighbor) && hexGrid.IsValidCell(neighbor))
+                {
+                    adjacentToValidCells.Add(neighbor);
+                }
+            }
+        }
+
+        GD.Print($"[HexControls] Calculated {adjacentToValidCells.Count} adjacent cells: [{string.Join(", ", adjacentToValidCells)}]");
     }
 
     #endregion
@@ -255,6 +402,8 @@ public partial class HexControls : Node2D
                 var clickedCell = WorldToHex(mouseButton.GlobalPosition);
                 var playerPos = FindPlayerPosition();
 
+                GD.Print($"[HexControls] Mouse clicked on cell: {clickedCell}");
+
                 // Check if clicked cell is valid target
                 bool isValidTarget = validCells.Contains(clickedCell) ||
                                    (canTargetSelf && clickedCell == playerPos);
@@ -264,6 +413,14 @@ public partial class HexControls : Node2D
                     cursorPosition = clickedCell;
                     UpdateAoePreview(cursorPosition);
                     ConfirmCellSelection();
+                }
+                else if (adjacentToValidCells.Contains(clickedCell))
+                {
+                    // Move cursor to adjacent cell but don't confirm
+                    cursorPosition = clickedCell;
+                    UpdateCursorVisual();
+                    UpdateAoePreview(cursorPosition);
+                    GD.Print($"[HexControls] Moved cursor to adjacent invalid cell: {clickedCell}");
                 }
                 else
                 {
@@ -287,24 +444,39 @@ public partial class HexControls : Node2D
 
         var playerPos = FindPlayerPosition();
 
-        // Allow moving to valid cells OR player position (if can target self)
-        if (validCells.Contains(newPos) || (canTargetSelf && newPos == playerPos))
+        // Allow moving to valid cells, player position (if can target self), OR adjacent cells
+        bool canMoveToValid = validCells.Contains(newPos) || (canTargetSelf && newPos == playerPos);
+        bool canMoveToAdjacent = adjacentToValidCells.Contains(newPos);
+
+        if (canMoveToValid || canMoveToAdjacent)
         {
             cursorPosition = newPos;
             UpdateCursorVisual();
             UpdateCameraPosition();
             UpdateAoePreview(cursorPosition);
-            GD.Print($"[HexControls] Interaction cursor moved to {cursorPosition}");
+            
+            if (canMoveToValid)
+                GD.Print($"[HexControls] Interaction cursor moved to valid cell: {cursorPosition}");
+            else
+                GD.Print($"[HexControls] Interaction cursor moved to adjacent invalid cell: {cursorPosition}");
         }
         else
         {
-            GD.Print($"[HexControls] Blocked cursor move to {newPos} - Player at {playerPos}, ValidCells: [{string.Join(", ", validCells)}], CanTargetSelf: {canTargetSelf}");
+            GD.Print($"[HexControls] Blocked cursor move to {newPos} - Player at {playerPos}, ValidCells: [{string.Join(", ", validCells)}], AdjacentCells: [{string.Join(", ", adjacentToValidCells)}], CanTargetSelf: {canTargetSelf}");
         }
     }
 
     private void ConfirmCellSelection()
     {
         var playerPos = FindPlayerPosition();
+
+        // Check if cursor is on an invalid cell (adjacent but not valid)
+        bool isValidTarget = validCells.Contains(cursorPosition) || (canTargetSelf && cursorPosition == playerPos);
+        if (!isValidTarget)
+        {
+            GD.Print($"[HexControls] Cannot confirm selection - cursor is on invalid cell {cursorPosition}");
+            return;
+        }
 
         // Special case: Movement to same position should cancel
         if (cursorPosition == playerPos && currentTargetType.ToLower() == "movement")
@@ -330,17 +502,10 @@ public partial class HexControls : Node2D
 
         justEnteredInteractionMode = false;
 
-        // Check if target is valid
-        if (validCells.Contains(cursorPosition) || (canTargetSelf && cursorPosition == playerPos))
+        GD.Print($"[HexControls] Confirming cell selection at {cursorPosition}");
+        if (hexGrid != null)
         {
-            if (hexGrid != null)
-            {
-                hexGrid.SelectCell(cursorPosition);
-            }
-        }
-        else
-        {
-            GD.Print($"[HexControls] Cannot confirm selection at {cursorPosition} - invalid target");
+            hexGrid.SelectCell(cursorPosition);
         }
     }
 
@@ -456,9 +621,11 @@ public partial class HexControls : Node2D
             return;
         }
 
-        cursorLayer.Clear();
-
-        GD.Print($"[HexControls] Updating cursor visual - InteractionMode: {interactionModeActive}, Position: {cursorPosition}");
+        DebugLog($"Updating cursor visual - InteractionMode: {interactionModeActive}, Position: {cursorPosition}");
+        
+        // Force cursor layer to be visible and enabled
+        cursorLayer.Visible = true;
+        cursorLayer.Enabled = true;
 
         if (interactionModeActive)
         {
@@ -468,43 +635,87 @@ public partial class HexControls : Node2D
         {
             UpdateFreeNavigationCursor();
         }
+        
+        // Verify the cursor was actually set and force a refresh
+        var verifySourceId = cursorLayer.GetCellSourceId(cursorPosition);
+        var verifyAtlas = cursorLayer.GetCellAtlasCoords(cursorPosition);
+        DebugLog($"Cursor verification - SourceId: {verifySourceId}, Atlas: {verifyAtlas}");
+        
+        // Force the layer to update its rendering
+        cursorLayer.QueueRedraw();
+        
+        // Additional diagnostic info
+        DebugLog($"CursorLayer visible: {cursorLayer.Visible}, enabled: {cursorLayer.Enabled}");
+        DebugLog($"CursorLayer modulate: {cursorLayer.Modulate}");
+        DebugLog($"CursorLayer z_index: {cursorLayer.ZIndex}");
+    }
+
+    private void RemoveOldCursor()
+    {
+        // More precise cursor removal - only remove the specific cursor position
+        // Don't iterate through all cells as this can interfere with AOE previews
+        
+        // Store the previous cursor position if we have one
+        if (cursorLayer != null)
+        {
+            // Only clear the exact cursor position, not all cursor tiles
+            // Check if there's a cursor at the current position and what type it is
+            var currentTile = cursorLayer.GetCellAtlasCoords(cursorPosition);
+            var sourceId = cursorLayer.GetCellSourceId(cursorPosition);
+            
+            // Only remove if it's actually a cursor tile (not an AOE preview)
+            if (sourceId != -1 && currentTile.X < 4) // Cursor tiles are 0-3, AOE is 4+
+            {
+                cursorLayer.EraseCell(cursorPosition);
+                GD.Print($"[HexControls] Removed old cursor at {cursorPosition}");
+            }
+        }
     }
 
     private void UpdateInteractionModeCursor()
     {
         var playerPos = FindPlayerPosition();
 
-        if (cursorPosition == playerPos)
+        // Always set a cursor, even if there's an AOE preview underneath
+        if (validCells.Contains(cursorPosition) || (canTargetSelf && cursorPosition == playerPos))
         {
-            // At player position - yellow cursor (atlas coords 0,0)
-            cursorLayer.SetCell(cursorPosition, 0, new Vector2I(0, 0), 0);
+            // Valid cell or self-target allowed - green cursor (atlas coords 2,0)
+            // Use alternative tile to ensure it renders on top
+            cursorLayer.SetCell(cursorPosition, 0, new Vector2I(2, 0), 1);
+            DebugLog($"Set GREEN cursor at {cursorPosition} (valid target)");
         }
-        else if (validCells.Contains(cursorPosition))
+        else if (adjacentToValidCells.Contains(cursorPosition))
         {
-            // Valid cell - green cursor (atlas coords 2,0)
-            cursorLayer.SetCell(cursorPosition, 0, new Vector2I(2, 0), 0);
+            // Adjacent to valid but not valid itself - red cursor (atlas coords 3,0)
+            // Use alternative tile to ensure it renders on top
+            cursorLayer.SetCell(cursorPosition, 0, new Vector2I(3, 0), 1);
+            DebugLog($"Set RED cursor at {cursorPosition} (adjacent to valid)");
         }
         else
         {
-            // Invalid cell - red cursor (atlas coords 3,0) or fallback to basic cursor
-            cursorLayer.SetCell(cursorPosition, 0, new Vector2I(1, 0), 0);
+            // Fallback - use red cursor for any invalid position
+            cursorLayer.SetCell(cursorPosition, 0, new Vector2I(3, 0), 1);
+            DebugLog($"Set RED cursor at {cursorPosition} (fallback - invalid)");
         }
     }
 
     private void UpdateFreeNavigationCursor()
     {
-        // Standard cursor
-        cursorLayer.SetCell(cursorPosition, 0, Vector2I.Zero, 1);
+        // Standard cursor for free navigation - GREEN (atlas coords 2,0)
+        cursorLayer.SetCell(cursorPosition, 0, new Vector2I(2, 0), 0);
+        DebugLog($"Set GREEN cursor at {cursorPosition} (free navigation)");
 
         // Debug hover cursor
         if (enableDebugHover && hoverPosition != cursorPosition)
         {
-            cursorLayer.SetCell(hoverPosition, 0, Vector2I.Zero, 0);
+            cursorLayer.SetCell(hoverPosition, 0, new Vector2I(2, 0), 0);
+            DebugLog($"Set GREEN hover cursor at {hoverPosition} (debug hover)");
         }
     }
 
     private void UpdateCursorVisibility()
     {
+        GD.Print($"[HexControls] UpdateCursorVisibility - isActive: {isActive}");
         if (!isActive)
             HideCursor();
         else
@@ -514,6 +725,7 @@ public partial class HexControls : Node2D
     private void ShowCursor()
     {
         if (cursorLayer == null) return;
+        GD.Print($"[HexControls] ShowCursor called - updating visual and camera");
         UpdateCursorVisual();
         if (cameraFollowsEnabled && camera != null)
         {
@@ -526,7 +738,8 @@ public partial class HexControls : Node2D
     private void HideCursor()
     {
         if (cursorLayer == null) return;
-        cursorLayer.Clear();
+        GD.Print($"[HexControls] HideCursor called");
+        RemoveOldCursor(); // Only remove cursor tiles, not AOE
     }
 
     private void ClearInteractionVisuals()

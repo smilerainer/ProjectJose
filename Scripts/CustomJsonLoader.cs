@@ -236,11 +236,15 @@ namespace CustomJsonSystem
         public static BattleConfigData LoadBattleConfig(string filePath)
         {
             var config = LoadFromFile<BattleConfigData>(filePath);
-            if (config.Skills.Count == 0 && config.Items.Count == 0)
+            
+            // Don't create default config - let the system handle missing configs better
+            if (config.Skills.Count == 0 && config.Items.Count == 0 && config.MoveOptions.Count == 0 && config.TalkOptions.Count == 0)
             {
-                GD.Print("Empty config loaded, creating default config");
-                return CreateDefaultBattleConfig();
+                GD.PrintErr("Configuration file appears to be empty or invalid. Please ensure battle_config.json is properly formatted.");
+                // Return the empty config instead of a default one to avoid issues
+                return config;
             }
+            
             return config;
         }
         
@@ -261,25 +265,95 @@ namespace CustomJsonSystem
             {
                 Skills = new List<ActionConfig>
                 {
-                    new() { Id = "fireball", Name = "Fireball", Description = "A blazing projectile", Damage = 25, Cost = 5, Range = 2 },
-                    new() { Id = "ice_thorn", Name = "Ice Thorn", Description = "Freezing spike", Damage = 20, Cost = 4, StatusEffect = "Slow", StatusDuration = 2 },
-                    new() { Id = "shroud", Name = "Shroud", Description = "Protective darkness", Cost = 3, StatusEffect = "Stealth", StatusDuration = 3, TargetType = "Self" }
+                    new() { 
+                        Id = "shroud", 
+                        Name = "Shroud", 
+                        Description = "Protective darkness", 
+                        Cost = 3, 
+                        StatusEffect = "Stealth", 
+                        StatusDuration = 3, 
+                        TargetType = "Self",
+                        Range = 0,
+                        RangePattern = new List<PatternCell> { new() { X = 0, Y = 0 } },
+                        AoePattern = new List<PatternCell> { new() { X = 0, Y = 0 } }
+                    }
                 },
                 Items = new List<ActionConfig>
                 {
-                    new() { Id = "potion", Name = "Potion", Description = "Restores health", HealAmount = 50, UsesRemaining = 3 },
-                    new() { Id = "ether", Name = "Ether", Description = "Restores energy", Cost = -10, UsesRemaining = 2, TargetType = "Self" },
-                    new() { Id = "phoenix_down", Name = "Phoenix Down", Description = "Revives fallen ally", HealAmount = 1, StatusEffect = "Revive", UsesRemaining = 1 }
+                    new() { 
+                        Id = "potion", 
+                        Name = "Potion", 
+                        Description = "Restores health", 
+                        HealAmount = 50, 
+                        UsesRemaining = 3,
+                        Range = 2,
+                        TargetType = "Ally",
+                        RangePattern = new List<PatternCell> 
+                        { 
+                            new() { X = 0, Y = 0 },
+                            new() { X = 1, Y = 0 },
+                            new() { X = -1, Y = 0 },
+                            new() { X = 0, Y = 1 },
+                            new() { X = 0, Y = -1 },
+                            new() { X = 1, Y = -1 },
+                            new() { X = -1, Y = -1 }
+                        },
+                        AoePattern = new List<PatternCell> { new() { X = 0, Y = 0 } }
+                    },
+                    new() { 
+                        Id = "ether", 
+                        Name = "Ether", 
+                        Description = "Restores energy", 
+                        Cost = -10, 
+                        UsesRemaining = 2, 
+                        TargetType = "Self",
+                        Range = 0,
+                        RangePattern = new List<PatternCell> { new() { X = 0, Y = 0 } },
+                        AoePattern = new List<PatternCell> { new() { X = 0, Y = 0 } }
+                    }
                 },
                 TalkOptions = new List<ActionConfig>
                 {
-                    new() { Id = "negotiate", Name = "Negotiate", Description = "Attempt peaceful resolution", Dialogue = "Let's talk this through...", FriendshipChange = 10 },
-                    new() { Id = "intimidate", Name = "Intimidate", Description = "Show dominance", Dialogue = "You don't want to fight me!", ReputationChange = 5, FriendshipChange = -5 },
-                    new() { Id = "flee", Name = "Flee", Description = "Attempt to escape", Dialogue = "This isn't worth it!", Cost = 5 }
+                    new() { 
+                        Id = "negotiate", 
+                        Name = "Negotiate", 
+                        Description = "Attempt peaceful resolution", 
+                        Dialogue = "Let's talk this through...", 
+                        FriendshipChange = 10,
+                        Range = 2,
+                        TargetType = "Enemy",
+                        RangePattern = new List<PatternCell> 
+                        { 
+                            new() { X = 1, Y = 0 },
+                            new() { X = -1, Y = 0 },
+                            new() { X = 0, Y = 1 },
+                            new() { X = 0, Y = -1 },
+                            new() { X = 1, Y = -1 },
+                            new() { X = -1, Y = -1 }
+                        },
+                        AoePattern = new List<PatternCell> { new() { X = 0, Y = 0 } }
+                    }
                 },
                 MoveOptions = new List<ActionConfig>
                 {
-                    new() { Id = "move", Name = "Move", Description = "Move to adjacent cell", Range = 1 }
+                    new() { 
+                        Id = "walk", 
+                        Name = "Walk", 
+                        Description = "Move to adjacent cell", 
+                        Range = 1,
+                        Cost = 0,
+                        TargetType = "Movement",
+                        RangePattern = new List<PatternCell> 
+                        { 
+                            new() { X = 1, Y = 0 },
+                            new() { X = -1, Y = 0 },
+                            new() { X = 0, Y = 1 },
+                            new() { X = 0, Y = -1 },
+                            new() { X = 1, Y = -1 },
+                            new() { X = -1, Y = -1 }
+                        },
+                        AoePattern = new List<PatternCell> { new() { X = 0, Y = 0 } }
+                    }
                 },
                 Settings = new GameSettings
                 {

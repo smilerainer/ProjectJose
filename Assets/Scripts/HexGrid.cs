@@ -1,4 +1,4 @@
-// HexGrid.cs - Core hex grid with clear separation of concerns
+// HexGrid.cs - Enhanced core hex grid with yellow AOE cursors
 using Godot;
 using System.Collections.Generic;
 
@@ -17,7 +17,7 @@ public partial class HexGrid : Node2D
     #region Signals
     
     [Signal] public delegate void CellSelectedEventHandler(Vector2I cell);
-    [Signal] public delegate void CellHoveredEventHandler(Vector2I cell); // NEW: For hover feedback
+    [Signal] public delegate void CellHoveredEventHandler(Vector2I cell);
     
     #endregion
     
@@ -37,10 +37,11 @@ public partial class HexGrid : Node2D
     private Vector2I selectedCell = new(-999, -999);
     private Vector2I hoveredCell = new(-999, -999);
     private HashSet<Vector2I> occupiedCells = new();
-    private Dictionary<Vector2I, string> cellMetadata = new(); // NEW: Store arbitrary data per cell
+    private Dictionary<Vector2I, string> cellMetadata = new();
+    private HashSet<Vector2I> currentAoeCells = new(); // Track current AOE cells
     
     [Export] private bool enableMouseDebug = false;
-    [Export] private bool enableHoverTracking = true; // NEW: Toggle hover tracking
+    [Export] private bool enableHoverTracking = true;
     
     #endregion
     
@@ -301,6 +302,8 @@ public partial class HexGrid : Node2D
         return new Vector3I(x, -x - z, z);
     }
     
+    #endregion
+    
     #region Targeting and Highlighting System
     
     public void ShowRangeHighlight(List<Vector2I> rangeCells)
@@ -320,18 +323,32 @@ public partial class HexGrid : Node2D
     
     public void ShowAoePreview(Vector2I targetCell, List<Vector2I> aoePattern)
     {
-        var cursorLayer = GetLayer(CellLayer.Cursor);
+        GD.Print($"[HexGrid] ShowAoePreview called - Target: {targetCell}, AOE cells: {aoePattern.Count}");
         
-        // Don't clear cursor layer completely, just add AOE highlights
+        // Clear existing AOE previews (only yellow cursors)
+        ClearAoePreview();
+        
+        // Track new AOE cells
+        currentAoeCells.Clear();
+        
         foreach (var offset in aoePattern)
         {
             var aoeCell = targetCell + offset;
             if (IsValidCell(aoeCell))
             {
-                SetTileWithCoords(aoeCell, CellLayer.Cursor, new Vector2I(4, 0)); // Red AOE preview
-                GD.Print($"[HexGrid] AOE preview at {aoeCell}");
+                // Use YELLOW cursor (atlas coords 0,0) for AOE preview
+                // Note: Green cursors will be drawn after this to override when needed
+                cursorLayer?.SetCell(aoeCell, 0, new Vector2I(0, 0), 0);
+                currentAoeCells.Add(aoeCell);
+                GD.Print($"[HexGrid] AOE preview (YELLOW) at {aoeCell} (offset {offset})");
+            }
+            else
+            {
+                GD.Print($"[HexGrid] Skipping invalid AOE cell: {aoeCell} (offset {offset})");
             }
         }
+        
+        GD.Print($"[HexGrid] AOE preview complete - {currentAoeCells.Count} yellow cursors placed");
     }
     
     public void ClearRangeHighlight()
@@ -343,9 +360,21 @@ public partial class HexGrid : Node2D
     
     public void ClearAoePreview()
     {
-        var cursorLayer = GetLayer(CellLayer.Cursor);
-        cursorLayer?.Clear();
-        GD.Print("[HexGrid] Cleared AOE preview");
+        if (cursorLayer == null) 
+        {
+            GD.Print("[HexGrid] ClearAoePreview - cursorLayer is null");
+            return;
+        }
+        
+        // Only clear AOE cells (yellow cursors), leave other cursor types
+        foreach (var aoeCell in currentAoeCells)
+        {
+            cursorLayer.EraseCell(aoeCell);
+            GD.Print($"[HexGrid] Cleared AOE preview at {aoeCell}");
+        }
+        
+        currentAoeCells.Clear();
+        GD.Print("[HexGrid] Cleared AOE preview - all yellow cursors removed");
     }
     
     public List<Vector2I> TransformPattern(List<Vector2I> pattern, Vector2I origin)
@@ -375,47 +404,5 @@ public partial class HexGrid : Node2D
     
     #endregion
     
-    [System.Obsolete("Use SelectCell instead")]
-    public void Select(Vector2I cell) => SelectCell(cell);
-    
-    [System.Obsolete("Use ClearSelection instead")]
-    public void Clear() => ClearSelection();
-    
-    [System.Obsolete("Use CellToWorld instead")]
-    public Vector2 GetPosition(Vector2I cell) => CellToWorld(cell);
-    
-    [System.Obsolete("Use WorldToCell instead")]
-    public Vector2I GetCell(Vector2 worldPos) => WorldToCell(worldPos);
-    
-    [System.Obsolete("Use IsValidCell instead")]
-    public bool IsValid(Vector2I cell) => IsValidCell(cell);
-    
-    [System.Obsolete("Use IsWalkableCell instead")]
-    public bool IsWalkable(Vector2I cell) => IsWalkableCell(cell);
-    
-    [System.Obsolete("Use IsBlockedCell instead")]
-    public bool IsBlocked(Vector2I cell) => IsBlockedCell(cell);
-    
-    [System.Obsolete("Use IsOccupiedCell instead")]
-    public bool IsOccupied(Vector2I cell) => IsOccupiedCell(cell);
-    
-    [System.Obsolete("Use SetCellOccupied instead")]
-    public void SetOccupied(Vector2I cell, bool occupied = true) => SetCellOccupied(cell, occupied);
-    
-    [System.Obsolete("Use SetTileWithCoords instead")]
-    public void SetTileByCoords(Vector2I cell, CellLayer layer, Vector2I tileCoords) => SetTileWithCoords(cell, layer, tileCoords);
-    
-    [System.Obsolete("Use HighlightCells instead")]
-    public void Highlight(List<Vector2I> cells, int tileId) => HighlightCells(cells, tileId);
-    
-    [System.Obsolete("Use GetNeighborsOf instead")]
-    public List<Vector2I> GetNeighbors(Vector2I cell) => GetNeighborsOf(cell);
-    
-    [System.Obsolete("Use GetCellsInRange instead")]
-    public List<Vector2I> GetReachable(Vector2I origin, int range) => GetCellsInRange(origin, range);
-    
-    [System.Obsolete("Use GetDistanceBetween instead")]
-    public int GetDistance(Vector2I a, Vector2I b) => GetDistanceBetween(a, b);
-    
-    #endregion
+
 }

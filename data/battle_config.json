@@ -1,347 +1,409 @@
 {
-    "skills": [
-      {
-        "id": "fireball",
-        "name": "Fireball",
-        "description": "A blazing projectile",
-        "damage": 25,
-        "cost": 5,
-        "range": 3,
-        "targetType": "Enemy",
-        "rangePattern": [
-          {"x": 0, "y": 0},
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1},
-          {"x": 2, "y": 0},
-          {"x": -2, "y": 0},
-          {"x": 0, "y": 2},
-          {"x": 0, "y": -2}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0},
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0}
-        ]
-      },
-      {
-        "id": "ice_thorn",
-        "name": "Ice Thorn",
-        "description": "Freezing spike",
-        "damage": 20,
-        "cost": 4,
-        "statusEffect": "Slow",
-        "statusDuration": 2,
-        "range": 2,
-        "targetType": "Enemy",
-        "rangePattern": [
-          {"x": 0, "y": 0},
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0}
-        ]
-      },
-      {
-        "id": "shroud",
-        "name": "Shroud",
-        "description": "Protective darkness",
-        "cost": 3,
-        "statusEffect": "Stealth",
-        "statusDuration": 3,
-        "range": 0,
-        "targetType": "Self",
-        "rangePattern": [
-          {"x": 0, "y": 0}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0}
-        ]
-      },
-      {
-        "id": "meteor",
-        "name": "Meteor",
-        "description": "Devastating area attack",
-        "damage": 40,
-        "cost": 15,
-        "range": 4,
-        "targetType": "Area",
-        "rangePattern": [
-          {"x": 0, "y": 0},
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1},
-          {"x": 2, "y": 0},
-          {"x": -2, "y": 0},
-          {"x": 0, "y": 2},
-          {"x": 0, "y": -2},
-          {"x": 1, "y": 1},
-          {"x": -1, "y": 1},
-          {"x": 2, "y": -1},
-          {"x": -2, "y": -1}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0},
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1}
-        ]
-      }
-    ],
-    "items": [
-      {
-        "id": "potion",
-        "name": "Potion",
-        "description": "Restores health",
-        "healAmount": 50,
-        "usesRemaining": 3,
-        "range": 2,
-        "targetType": "Ally",
-        "rangePattern": [
-          {"x": 0, "y": 0},
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0}
-        ]
-      },
-      {
-        "id": "ether",
-        "name": "Ether",
-        "description": "Restores energy",
-        "cost": -10,
-        "usesRemaining": 2,
-        "range": 0,
-        "targetType": "Self",
-        "rangePattern": [
-          {"x": 0, "y": 0}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0}
-        ]
-      },
-      {
-        "id": "phoenix_down",
-        "name": "Phoenix Down",
-        "description": "Revives fallen ally",
-        "healAmount": 1,
-        "statusEffect": "Revive",
-        "usesRemaining": 1,
-        "range": 3,
-        "targetType": "Ally",
-        "rangePattern": [
-          {"x": 0, "y": 0},
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1},
-          {"x": 2, "y": 0},
-          {"x": -2, "y": 0},
-          {"x": 0, "y": 2},
-          {"x": 0, "y": -2}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0}
-        ]
-      },
-      {
-        "id": "bomb",
-        "name": "Bomb",
-        "description": "Explosive device",
-        "damage": 30,
-        "usesRemaining": 2,
-        "range": 3,
-        "targetType": "Area",
-        "rangePattern": [
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1},
-          {"x": 2, "y": 0},
-          {"x": -2, "y": 0},
-          {"x": 0, "y": 2},
-          {"x": 0, "y": -2}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0},
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1}
-        ]
-      }
-    ],
-    "talkOptions": [
-      {
-        "id": "negotiate",
-        "name": "Negotiate",
-        "description": "Attempt peaceful resolution",
-        "dialogue": "Let's talk this through...",
-        "friendshipChange": 10,
-        "range": 2,
-        "targetType": "Enemy",
-        "rangePattern": [
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0}
-        ]
-      },
-      {
-        "id": "intimidate",
-        "name": "Intimidate",
-        "description": "Show dominance",
-        "dialogue": "You don't want to fight me!",
-        "reputationChange": 5,
-        "friendshipChange": -5,
-        "range": 2,
-        "targetType": "Enemy",
-        "rangePattern": [
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0}
-        ]
-      },
-      {
-        "id": "flee",
-        "name": "Flee",
-        "description": "Attempt to escape",
-        "dialogue": "This isn't worth it!",
-        "cost": 5,
-        "range": 0,
-        "targetType": "Self",
-        "rangePattern": [
-          {"x": 0, "y": 0}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0}
-        ]
-      }
-    ],
-    "moveOptions": [
-      {
-        "id": "walk",
-        "name": "Walk",
-        "description": "Move to adjacent cell",
-        "range": 1,
-        "cost": 0,
-        "targetType": "Movement",
-        "rangePattern": [
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0}
-        ]
-      },
-      {
-        "id": "run",
-        "name": "Run",
-        "description": "Move up to 2 cells away",
-        "range": 2,
-        "cost": 1,
-        "targetType": "Movement",
-        "rangePattern": [
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1},
-          {"x": 2, "y": 0},
-          {"x": -2, "y": 0},
-          {"x": 0, "y": 2},
-          {"x": 0, "y": -2},
-          {"x": 1, "y": 1},
-          {"x": -1, "y": 1}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0}
-        ]
-      },
-      {
-        "id": "teleport",
-        "name": "Teleport",
-        "description": "Instantly move to any valid location",
-        "range": 5,
-        "cost": 10,
-        "targetType": "Movement",
-        "rangePattern": [
-          {"x": 1, "y": 0},
-          {"x": -1, "y": 0},
-          {"x": 0, "y": 1},
-          {"x": 0, "y": -1},
-          {"x": 1, "y": -1},
-          {"x": -1, "y": -1},
-          {"x": 2, "y": 0},
-          {"x": -2, "y": 0},
-          {"x": 0, "y": 2},
-          {"x": 0, "y": -2},
-          {"x": 1, "y": 1},
-          {"x": -1, "y": 1},
-          {"x": 2, "y": -1},
-          {"x": -2, "y": -1},
-          {"x": 3, "y": 0},
-          {"x": -3, "y": 0},
-          {"x": 0, "y": 3},
-          {"x": 0, "y": -3},
-          {"x": 2, "y": 1},
-          {"x": -2, "y": 1},
-          {"x": 1, "y": 2},
-          {"x": -1, "y": 2}
-        ],
-        "aoePattern": [
-          {"x": 0, "y": 0}
-        ]
-      }
-    ],
-    "settings": {
-      "startingMoney": 100,
-      "maxPartySize": 4,
-      "defaultMoveRange": 1,
-      "enableFriendlyFire": false,
-      "customSettings": {
-        "debugMode": true,
-        "showRangeIndicators": true,
-        "showAoeIndicators": true
-      }
+  "skills": [
+    {
+      "id": "fireball",
+      "name": "Fireball",
+      "description": "A blazing projectile that explodes on impact",
+      "damage": 25,
+      "cost": 5,
+      "range": 3,
+      "targetType": "Enemy",
+      "speed": 0.8,
+      "criticalChance": 0.1,
+      "criticalMultiplier": 2.0,
+      "rangePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1},
+        {"x": 2, "y": 0},
+        {"x": -2, "y": 0},
+        {"x": 0, "y": 2},
+        {"x": 0, "y": -2}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0}
+      ]
+    },
+    {
+      "id": "ice_shard",
+      "name": "Ice Shard",
+      "description": "Sharp ice that slows enemies",
+      "damage": 20,
+      "cost": 4,
+      "statusEffect": "Slow",
+      "statusDuration": 2,
+      "range": 2,
+      "targetType": "Enemy",
+      "speed": 1.2,
+      "rangePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    },
+    {
+      "id": "heal",
+      "name": "Heal",
+      "description": "Restore health to an ally",
+      "healAmount": 30,
+      "cost": 6,
+      "range": 2,
+      "targetType": "Ally",
+      "speed": 1.0,
+      "rangePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    },
+    {
+      "id": "cleanse",
+      "name": "Cleanse",
+      "description": "Remove negative status effects",
+      "cost": 4,
+      "removesStatus": "Poison,Slow,Stun",
+      "range": 1,
+      "targetType": "Ally",
+      "speed": 1.5,
+      "rangePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    },
+    {
+      "id": "lightning_bolt",
+      "name": "Lightning Bolt",
+      "description": "High damage with chance to stun",
+      "damage": 35,
+      "cost": 8,
+      "statusEffect": "Stun",
+      "statusDuration": 1,
+      "range": 4,
+      "targetType": "Enemy",
+      "speed": 0.5,
+      "criticalChance": 0.2,
+      "criticalMultiplier": 1.5,
+      "requiresLineOfSight": true,
+      "rangePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1},
+        {"x": 2, "y": 0},
+        {"x": -2, "y": 0},
+        {"x": 0, "y": 2},
+        {"x": 0, "y": -2},
+        {"x": 1, "y": 1},
+        {"x": -1, "y": 1},
+        {"x": 2, "y": -1},
+        {"x": -2, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "health_potion",
+      "name": "Health Potion",
+      "description": "Restores 50 HP instantly",
+      "healAmount": 50,
+      "usesRemaining": 3,
+      "range": 2,
+      "targetType": "Ally",
+      "speed": 2.0,
+      "rangePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    },
+    {
+      "id": "mana_potion",
+      "name": "Mana Potion",
+      "description": "Restores energy",
+      "cost": -10,
+      "usesRemaining": 2,
+      "range": 0,
+      "targetType": "Self",
+      "speed": 1.5,
+      "rangePattern": [
+        {"x": 0, "y": 0}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    },
+    {
+      "id": "antidote",
+      "name": "Antidote",
+      "description": "Cures poison and other ailments",
+      "removesStatus": "Poison",
+      "usesRemaining": 5,
+      "range": 1,
+      "targetType": "Ally",
+      "speed": 1.0,
+      "rangePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    },
+    {
+      "id": "smoke_bomb",
+      "name": "Smoke Bomb",
+      "description": "Creates concealment in an area",
+      "statusEffect": "Concealed",
+      "statusDuration": 3,
+      "usesRemaining": 2,
+      "range": 3,
+      "targetType": "Area",
+      "speed": 0.8,
+      "rangePattern": [
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1},
+        {"x": 2, "y": 0},
+        {"x": -2, "y": 0},
+        {"x": 0, "y": 2},
+        {"x": 0, "y": -2}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1}
+      ]
+    }
+  ],
+  "talkOptions": [
+    {
+      "id": "negotiate",
+      "name": "Negotiate",
+      "description": "Attempt peaceful resolution",
+      "dialogue": "Let's find a peaceful solution...",
+      "friendshipChange": 15,
+      "moneyChange": -5,
+      "range": 2,
+      "targetType": "Enemy",
+      "speed": 1.0,
+      "rangePattern": [
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    },
+    {
+      "id": "intimidate",
+      "name": "Intimidate",
+      "description": "Show dominance to frighten enemies",
+      "dialogue": "Stand down or face the consequences!",
+      "reputationChange": 5,
+      "friendshipChange": -10,
+      "statusEffect": "Frightened",
+      "statusDuration": 2,
+      "range": 2,
+      "targetType": "Enemy",
+      "speed": 0.8,
+      "rangePattern": [
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    },
+    {
+      "id": "bribe",
+      "name": "Bribe",
+      "description": "Offer money for cooperation",
+      "dialogue": "Perhaps we can reach a monetary agreement?",
+      "friendshipChange": 20,
+      "moneyChange": -25,
+      "range": 1,
+      "targetType": "Enemy",
+      "speed": 1.2,
+      "rangePattern": [
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    },
+    {
+      "id": "rally",
+      "name": "Rally",
+      "description": "Boost ally morale",
+      "dialogue": "We can do this together!",
+      "statusEffect": "Motivated",
+      "statusDuration": 3,
+      "range": 2,
+      "targetType": "Ally",
+      "speed": 1.0,
+      "rangePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0}
+      ]
+    }
+  ],
+  "moveOptions": [
+    {
+      "id": "walk",
+      "name": "Walk",
+      "description": "Move to adjacent cell",
+      "range": 1,
+      "cost": 0,
+      "targetType": "Movement",
+      "speed": 1.0,
+      "rangePattern": [
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    },
+    {
+      "id": "dash",
+      "name": "Dash",
+      "description": "Quick movement up to 2 cells",
+      "range": 2,
+      "cost": 1,
+      "targetType": "Movement",
+      "speed": 2.0,
+      "rangePattern": [
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1},
+        {"x": 2, "y": 0},
+        {"x": -2, "y": 0},
+        {"x": 0, "y": 2},
+        {"x": 0, "y": -2},
+        {"x": 1, "y": 1},
+        {"x": -1, "y": 1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    },
+    {
+      "id": "tactical_retreat",
+      "name": "Tactical Retreat",
+      "description": "Move away while gaining defensive bonus",
+      "range": 1,
+      "cost": 0,
+      "statusEffect": "Defensive",
+      "statusDuration": 1,
+      "targetType": "Movement",
+      "speed": 1.5,
+      "rangePattern": [
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
+    }
+  ],
+  "settings": {
+    "startingMoney": 150,
+    "maxPartySize": 4,
+    "defaultMoveRange": 1,
+    "enableFriendlyFire": false,
+    "enableCriticalHits": true,
+    "enableStatusEffects": true,
+    "customSettings": {
+      "debugMode": true,
+      "showRangeIndicators": true,
+      "showAoeIndicators": true,
+      "enableAdvancedCombat": true,
+      "useHexGrid": true
     }
   }
+}
