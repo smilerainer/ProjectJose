@@ -19,9 +19,6 @@ scale = Vector2(2.94759, 1.28409)
 script = ExtResource("3_arbkf")
 cursorTexture = ExtResource("3_ad07i")
 uiCursorOffset = Vector2(-21, 0)
-enableDebugTabCycling = true
-enableVerboseDebug = false
-debugCursorPositioning = false
 enableCursorSnapping = false
 dynamicMenuRoot = NodePath("../UI/DynamicMenu")
 

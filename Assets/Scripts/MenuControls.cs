@@ -1,17 +1,26 @@
-// MenuControls.cs
 using Godot;
 using System.Collections.Generic;
 using System.Linq;
 
 public partial class MenuControls : Container
 {
+    #region Signals
+    
     [Signal] public delegate void ButtonSelectedEventHandler(int index, BaseButton button);
     [Signal] public delegate void ButtonActivatedEventHandler(int index, BaseButton button);
     [Signal] public delegate void MenuActivatedEventHandler();
     [Signal] public delegate void MenuDeactivatedEventHandler();
     
+    #endregion
+    
+    #region Exported Properties
+    
     [Export] private bool wrapNavigation = true;
     [Export] private bool autoActivateOnShow = true;
+    
+    #endregion
+    
+    #region Private Fields
     
     private Container buttonContainer;
     private List<BaseButton> buttons = new();
@@ -20,9 +29,17 @@ public partial class MenuControls : Container
     private bool isActive = false;
     private CentralInputManager inputManager;
     
+    #endregion
+    
+    #region Public Properties
+    
     public bool IsActive => isActive;
     public BaseButton CurrentButton => GetButtonAt(currentRow, currentCol);
     public Vector2 CurrentButtonPosition => CurrentButton?.GlobalPosition ?? Vector2.Zero;
+    
+    #endregion
+    
+    #region Godot Lifecycle
     
     public override void _Ready()
     {
@@ -30,7 +47,9 @@ public partial class MenuControls : Container
         FindInputManager();
     }
     
-    #region Public API
+    #endregion
+    
+    #region Public Core Methods
     
     public void SetActive(bool active)
     {
@@ -42,49 +61,57 @@ public partial class MenuControls : Container
         else
             DeactivateMenu();
         
-        // Always notify cursor when activation state changes
         NotifyInputManagerCursorUpdate();
     }
     
     public void Navigate(Vector2I direction)
     {
-        if (!isActive || buttons.Count != 4) return;
+        if (!isActive || buttons.Count == 0) return;
         
         int newRow = currentRow;
         int newCol = currentCol;
         
-        if (direction.Y > 0) newRow++; // Down
-        else if (direction.Y < 0) newRow--; // Up
-        else if (direction.X > 0) newCol++; // Right
-        else if (direction.X < 0) newCol--; // Left
+        if (direction.Y > 0) newRow++;
+        else if (direction.Y < 0) newRow--;
+        else if (direction.X > 0) newCol++;
+        else if (direction.X < 0) newCol--;
         
-        // Check bounds and wrapping
-        if (wrapNavigation)
+        if (buttons.Count == 4)
         {
-            newRow = (newRow + 2) % 2; // Wrap between 0 and 1
-            newCol = (newCol + 2) % 2; // Wrap between 0 and 1
+            if (wrapNavigation)
+            {
+                newRow = (newRow + 2) % 2;
+                newCol = (newCol + 2) % 2;
+            }
+            else
+            {
+                newRow = Mathf.Clamp(newRow, 0, 1);
+                newCol = Mathf.Clamp(newCol, 0, 1);
+            }
+        }
+        else if (buttons.Count == 2)
+        {
+            newRow = 0;
+            if (wrapNavigation)
+                newCol = (newCol + 2) % 2;
+            else
+                newCol = Mathf.Clamp(newCol, 0, 1);
         }
         else
         {
-            newRow = Mathf.Clamp(newRow, 0, 1);
-            newCol = Mathf.Clamp(newCol, 0, 1);
+            newCol = 0;
+            if (wrapNavigation)
+                newRow = (newRow + buttons.Count) % buttons.Count;
+            else
+                newRow = Mathf.Clamp(newRow, 0, buttons.Count - 1);
         }
 
-        // Only move if position actually changed
         if (newRow != currentRow || newCol != currentCol)
         {
-            GD.Print($"[MenuControls] Navigate: ({currentRow},{currentCol}) -> ({newRow},{newCol})");
             currentRow = newRow;
             currentCol = newCol;
             ApplySelection();
-            
-            // ONLY notify cursor when navigation actually succeeds
             NotifyInputManagerCursorUpdate();
-        }
-        else
-        {
-            GD.Print($"[MenuControls] Navigate: ({currentRow},{currentCol}) - no movement (blocked or same position)");
-            // Do NOT notify cursor when navigation is blocked
         }
     }
     
@@ -102,12 +129,39 @@ public partial class MenuControls : Container
         currentRow = 0;
         currentCol = 0;
         ApplySelection();
-        
-        // Notify cursor update after reset
         NotifyInputManagerCursorUpdate();
     }
     
-    // Add a button to this menu's container
+    public bool NavigateToButton(int index)
+    {
+        if (index < 0 || index >= buttons.Count)
+            return false;
+        
+        if (buttons.Count == 4)
+        {
+            currentRow = index / 2;
+            currentCol = index % 2;
+        }
+        else if (buttons.Count == 2)
+        {
+            currentRow = 0;
+            currentCol = index;
+        }
+        else
+        {
+            currentRow = index;
+            currentCol = 0;
+        }
+        
+        ApplySelection();
+        NotifyInputManagerCursorUpdate();
+        return true;
+    }
+    
+    #endregion
+    
+    #region Button Management
+    
     public BaseButton AddButton(string buttonText, string buttonName = "")
     {
         if (buttonContainer == null)
@@ -120,95 +174,57 @@ public partial class MenuControls : Container
         button.Text = buttonText;
         button.Name = string.IsNullOrEmpty(buttonName) ? buttonText : buttonName;
         
-        // Add to container
         buttonContainer.AddChild(button);
-        
-        // Refresh our button list
         DiscoverButtons();
         
         GD.Print($"[MenuControls] Added button '{button.Name}' with text '{buttonText}' to {Name}");
-        GD.Print($"[MenuControls] Total buttons now: {buttons.Count}");
-        
         return button;
     }
     
-    // Delete a specific button by name
     public bool DeleteButton(string buttonName)
     {
         if (buttonContainer == null)
-        {
-            GD.PrintErr($"[MenuControls] Cannot delete button - no container found in {Name}");
             return false;
-        }
         
         var button = buttons.FirstOrDefault(b => b.Name == buttonName);
         if (button == null)
-        {
-            GD.PrintErr($"[MenuControls] Button '{buttonName}' not found in {Name}");
             return false;
-        }
         
-        // Remove from scene and free memory
         button.QueueFree();
-        
-        // Refresh our button list
         DiscoverButtons();
-        
-        GD.Print($"[MenuControls] Deleted button '{buttonName}' from {Name}");
-        GD.Print($"[MenuControls] Total buttons now: {buttons.Count}");
-        
         return true;
     }
     
-    // Delete a button by index
     public bool DeleteButtonAt(int index)
     {
         if (index < 0 || index >= buttons.Count)
-        {
-            GD.PrintErr($"[MenuControls] Button index {index} out of range (0-{buttons.Count - 1}) in {Name}");
             return false;
-        }
         
         var button = buttons[index];
         return DeleteButton(button.Name);
     }
     
-    // Clear all buttons from the container
     public void ClearAllButtons()
     {
         if (buttonContainer == null)
-        {
-            GD.PrintErr($"[MenuControls] Cannot clear buttons - no container found in {Name}");
             return;
-        }
         
-        // Remove all button children immediately, not with QueueFree()
-        foreach (var button in buttons.ToList()) // ToList() to avoid modification during iteration
+        foreach (var button in buttons.ToList())
         {
             button.GetParent()?.RemoveChild(button);
-            button.QueueFree(); // Still queue for memory cleanup
+            button.QueueFree();
         }
         
-        // Clear our list immediately since nodes are removed from tree
         buttons.Clear();
-        
-        GD.Print($"[MenuControls] Cleared all buttons from {Name}");
     }
-    // Set buttons from a text array - wipes existing and creates new ones
+    
     public void SetButtonsFromArray(string[] buttonTexts)
     {
         if (buttonTexts == null || buttonTexts.Length == 0)
-        {
-            GD.PrintErr($"[MenuControls] Cannot set buttons - array is null or empty");
             return;
-        }
         
-        GD.Print($"[MenuControls] Setting {buttonTexts.Length} buttons from array in {Name}");
-        
-        // Step 1: Clear all existing buttons
         ClearAllButtons();
         
-        // Step 2: Add new buttons from array
         for (int i = 0; i < buttonTexts.Length; i++)
         {
             var buttonText = buttonTexts[i];
@@ -216,102 +232,133 @@ public partial class MenuControls : Container
             AddButton(buttonText, buttonName);
         }
         
-        // Reset to first button
+        ResetToFirstButton();
+    }
+    
+    #endregion
+    
+    #region Button Information
+    
+    public int GetLinearIndex()
+    {
+        if (buttons.Count == 4)
+            return currentRow * 2 + currentCol;
+        else if (buttons.Count == 2)
+            return currentCol;
+        else
+            return currentRow;
+    }
+    
+    public Vector2I GetCurrentGridPosition()
+    {
+        return new Vector2I(currentCol, currentRow);
+    }
+    
+    public int GetButtonCount()
+    {
+        return buttons.Count;
+    }
+    
+    public string GetCurrentButtonText()
+    {
+        var button = CurrentButton;
+        return GetButtonText(button);
+    }
+    
+    public string[] GetAllButtonTexts()
+    {
+        var texts = new string[buttons.Count];
+        for (int i = 0; i < buttons.Count; i++)
+        {
+            texts[i] = GetButtonText(buttons[i]);
+        }
+        return texts;
+    }
+    
+    public Dictionary<string, Variant> GetButtonInfo(int index)
+    {
+        var info = new Dictionary<string, Variant>();
+        
+        if (index >= 0 && index < buttons.Count)
+        {
+            var button = buttons[index];
+            info["index"] = index;
+            info["name"] = button.Name;
+            info["text"] = GetButtonText(button);
+            info["position"] = button.GlobalPosition;
+            info["size"] = button.Size;
+            info["visible"] = button.Visible;
+            info["disabled"] = button.Disabled;
+        }
+        
+        return info;
+    }
+    
+    public bool HasButton(string buttonName)
+    {
+        return buttons.Exists(b => b.Name == buttonName);
+    }
+    
+    public BaseButton GetButtonByName(string buttonName)
+    {
+        return buttons.FirstOrDefault(b => b.Name == buttonName);
+    }
+    
+    #endregion
+    
+    #region Button State Management
+    
+    public void SetButtonEnabled(string buttonName, bool enabled)
+    {
+        var button = GetButtonByName(buttonName);
+        if (button != null)
+        {
+            button.Disabled = !enabled;
+        }
+    }
+    
+    public void ConfigureAsSubmenu(bool wrapNav = true, bool autoActivate = false)
+    {
+        wrapNavigation = wrapNav;
+        autoActivateOnShow = autoActivate;
         currentRow = 0;
         currentCol = 0;
+    }
+    
+    #endregion
+    
+    #region State Persistence
+    
+    public Dictionary<string, Variant> SaveState()
+    {
+        var state = new Dictionary<string, Variant>();
+        state["active"] = isActive;
+        state["row"] = currentRow;
+        state["col"] = currentCol;
+        state["button_count"] = buttons.Count;
+        state["button_texts"] = GetAllButtonTexts();
+        return state;
+    }
+    
+    public void RestoreState(Dictionary<string, Variant> state)
+    {
+        if (state.ContainsKey("row") && state.ContainsKey("col"))
+        {
+            currentRow = state["row"].AsInt32();
+            currentCol = state["col"].AsInt32();
+        }
+        
+        if (state.ContainsKey("active"))
+        {
+            SetActive(state["active"].AsBool());
+        }
+        
         ApplySelection();
-        
-        GD.Print($"[MenuControls] Successfully set {buttons.Count} buttons from array");
-    }
-    
-    #endregion
-
-    #region Cursor Integration
-    
-    private void FindInputManager()
-    {
-        // Try multiple common paths for the input manager
-        inputManager = GetNodeOrNull<CentralInputManager>("/TestBattle2/CentralInputManager");
-        
-        if (inputManager == null)
-        {
-            // Try finding it anywhere in the scene tree
-            inputManager = GetTree().GetFirstNodeInGroup("input_manager") as CentralInputManager;
-        }
-        
-        if (inputManager == null)
-        {
-            // Try finding it as a child of the scene root
-            var sceneRoot = GetTree().CurrentScene;
-            inputManager = sceneRoot.GetNodeOrNull<CentralInputManager>("CentralInputManager");
-        }
-        
-        if (inputManager == null)
-        {
-            // Last resort: search recursively
-            inputManager = FindInputManagerRecursive(GetTree().CurrentScene);
-        }
-        
-        if (inputManager != null)
-        {
-            GD.Print($"[MenuControls] Found CentralInputManager for {Name}");
-        }
-        else
-        {
-            GD.PrintErr($"[MenuControls] Could not find CentralInputManager for {Name}");
-        }
-    }
-    
-    private CentralInputManager FindInputManagerRecursive(Node node)
-    {
-        if (node is CentralInputManager manager)
-            return manager;
-            
-        foreach (Node child in node.GetChildren())
-        {
-            var found = FindInputManagerRecursive(child);
-            if (found != null)
-                return found;
-        }
-        
-        return null;
-    }
-    
-    private void NotifyInputManagerCursorUpdate()
-    {
-        // Simplified debug output - only show when actually changing buttons
-        var currentButton = CurrentButton;
-        
-        if (inputManager != null)
-        {
-            inputManager.NotifyButtonFocusChanged();
-        }
-        else
-        {
-            // Try to find it again if it wasn't found before
-            FindInputManager();
-            inputManager?.NotifyButtonFocusChanged();
-        }
-    }
-    
-    #endregion
-
-    #region Grid Helpers
-
-    private BaseButton GetButtonAt(int row, int col)
-    {
-        int index = row * 2 + col; // Convert 2D to linear index
-        return (index >= 0 && index < buttons.Count) ? buttons[index] : null;
-    }
-    
-    private int GetLinearIndex()
-    {
-        return currentRow * 2 + currentCol;
     }
     
     #endregion
     
-    #region Internal Implementation
+    #region Private Initialization Methods
     
     private void InitializeMenu()
     {
@@ -326,34 +373,11 @@ public partial class MenuControls : Container
         {
             SetActive(true);
         }
-            
-        // Debug: print button assignments
-        if (buttons.Count == 2)
-        {
-            GD.Print($"[MenuControls] 2-button layout assigned:");
-            GD.Print($"  (0,0) = {buttons[0]?.Name}  (0,1) = {buttons[1]?.Name}");
-        }
-        else if (buttons.Count == 4)
-        {
-            GD.Print($"[MenuControls] 2x2 Grid assigned:");
-            GD.Print($"  (0,0) = {buttons[0]?.Name}  (0,1) = {buttons[1]?.Name}");
-            GD.Print($"  (1,0) = {buttons[2]?.Name}  (1,1) = {buttons[3]?.Name}");
-        }
-        else
-        {
-            GD.Print($"[MenuControls] Generic layout with {buttons.Count} buttons:");
-            for (int i = 0; i < buttons.Count; i++)
-            {
-                GD.Print($"  [{i}] = {buttons[i]?.Name}");
-            }
-        }
     }
     
     private void FindButtonContainer()
     {
-        // Since MenuControls now inherits from VBoxContainer, it IS the container
         buttonContainer = this;
-        GD.Print($"[MenuControls] Using self as button container: {Name}");
     }
     
     private void DiscoverButtons()
@@ -362,11 +386,6 @@ public partial class MenuControls : Container
         if (buttonContainer == null) return;
         
         CollectButtons(buttonContainer);
-        
-        if (buttons.Count == 0)
-        {
-            GD.PrintErr($"[MenuControls] No buttons found in {Name}");
-        }
     }
     
     private void CollectButtons(Node parent)
@@ -383,6 +402,10 @@ public partial class MenuControls : Container
             }
         }
     }
+    
+    #endregion
+    
+    #region Private UI Methods
     
     private void ActivateMenu()
     {
@@ -414,6 +437,112 @@ public partial class MenuControls : Container
         {
             button?.ReleaseFocus();
         }
+    }
+    
+    private BaseButton GetButtonAt(int row, int col)
+    {
+        int index;
+        
+        if (buttons.Count == 4)
+            index = row * 2 + col;
+        else if (buttons.Count == 2)
+            index = col;
+        else
+            index = row;
+        
+        return (index >= 0 && index < buttons.Count) ? buttons[index] : null;
+    }
+    
+    private string GetButtonText(BaseButton button)
+    {
+        if (button == null) return "";
+        
+        if (button is Button btn)
+            return btn.Text;
+        else if (button is LinkButton linkBtn)
+            return linkBtn.Text;
+        else if (button is OptionButton optBtn)
+            return optBtn.Text;
+        
+        return button.Name;
+    }
+    
+    #endregion
+    
+    #region Input Manager Integration
+    
+    private void FindInputManager()
+    {
+        inputManager = GetNodeOrNull<CentralInputManager>("/TestBattle2/CentralInputManager");
+        
+        if (inputManager == null)
+        {
+            inputManager = GetTree().GetFirstNodeInGroup("input_manager") as CentralInputManager;
+        }
+        
+        if (inputManager == null)
+        {
+            var sceneRoot = GetTree().CurrentScene;
+            inputManager = sceneRoot.GetNodeOrNull<CentralInputManager>("CentralInputManager");
+        }
+        
+        if (inputManager == null)
+        {
+            inputManager = FindInputManagerRecursive(GetTree().CurrentScene);
+        }
+    }
+    
+    private CentralInputManager FindInputManagerRecursive(Node node)
+    {
+        if (node is CentralInputManager manager)
+            return manager;
+            
+        foreach (Node child in node.GetChildren())
+        {
+            var found = FindInputManagerRecursive(child);
+            if (found != null)
+                return found;
+        }
+        
+        return null;
+    }
+    
+    private void NotifyInputManagerCursorUpdate()
+    {
+        if (inputManager != null)
+        {
+            inputManager.NotifyButtonFocusChanged();
+        }
+        else
+        {
+            FindInputManager();
+            inputManager?.NotifyButtonFocusChanged();
+        }
+    }
+    
+    #endregion
+    
+    #region Debug Methods
+    
+    public void PrintDebugInfo()
+    {
+        GD.Print($"[MenuControls] === Debug Info for {Name} ===");
+        GD.Print($"  Active: {isActive}");
+        GD.Print($"  Button Count: {buttons.Count}");
+        GD.Print($"  Current Position: ({currentRow}, {currentCol})");
+        GD.Print($"  Current Button: {GetCurrentButtonText()}");
+        GD.Print($"  Wrap Navigation: {wrapNavigation}");
+        
+        if (buttons.Count > 0)
+        {
+            GD.Print($"  Buttons:");
+            for (int i = 0; i < buttons.Count; i++)
+            {
+                var info = GetButtonInfo(i);
+                GD.Print($"    [{i}] {info["text"]} (Name: {info["name"]}, Visible: {info["visible"]}, Disabled: {info["disabled"]})");
+            }
+        }
+        GD.Print($"[MenuControls] === End Debug Info ===");
     }
     
     #endregion
