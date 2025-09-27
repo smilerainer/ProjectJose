@@ -24,8 +24,7 @@ public partial class MenuControls : Container
     
     private Container buttonContainer;
     private List<BaseButton> buttons = new();
-    private int currentRow = 0;
-    private int currentCol = 0;
+    private int currentIndex = 0;
     private bool isActive = false;
     private CentralInputManager inputManager;
     
@@ -34,7 +33,7 @@ public partial class MenuControls : Container
     #region Public Properties
     
     public bool IsActive => isActive;
-    public BaseButton CurrentButton => GetButtonAt(currentRow, currentCol);
+    public BaseButton CurrentButton => currentIndex >= 0 && currentIndex < buttons.Count ? buttons[currentIndex] : null;
     public Vector2 CurrentButtonPosition => CurrentButton?.GlobalPosition ?? Vector2.Zero;
     
     #endregion
@@ -68,48 +67,31 @@ public partial class MenuControls : Container
     {
         if (!isActive || buttons.Count == 0) return;
         
-        int newRow = currentRow;
-        int newCol = currentCol;
+        int newIndex = currentIndex;
         
-        if (direction.Y > 0) newRow++;
-        else if (direction.Y < 0) newRow--;
-        else if (direction.X > 0) newCol++;
-        else if (direction.X < 0) newCol--;
-        
-        if (buttons.Count == 4)
+        // Simple: any direction moves to next/previous button
+        if (direction.Y > 0 || direction.X > 0) // Down or Right = Next
         {
-            if (wrapNavigation)
-            {
-                newRow = (newRow + 2) % 2;
-                newCol = (newCol + 2) % 2;
-            }
-            else
-            {
-                newRow = Mathf.Clamp(newRow, 0, 1);
-                newCol = Mathf.Clamp(newCol, 0, 1);
-            }
+            newIndex++;
         }
-        else if (buttons.Count == 2)
+        else if (direction.Y < 0 || direction.X < 0) // Up or Left = Previous  
         {
-            newRow = 0;
-            if (wrapNavigation)
-                newCol = (newCol + 2) % 2;
-            else
-                newCol = Mathf.Clamp(newCol, 0, 1);
+            newIndex--;
+        }
+        
+        // Handle wrapping
+        if (wrapNavigation)
+        {
+            newIndex = (newIndex + buttons.Count) % buttons.Count;
         }
         else
         {
-            newCol = 0;
-            if (wrapNavigation)
-                newRow = (newRow + buttons.Count) % buttons.Count;
-            else
-                newRow = Mathf.Clamp(newRow, 0, buttons.Count - 1);
+            newIndex = Mathf.Clamp(newIndex, 0, buttons.Count - 1);
         }
-
-        if (newRow != currentRow || newCol != currentCol)
+        
+        if (newIndex != currentIndex)
         {
-            currentRow = newRow;
-            currentCol = newCol;
+            currentIndex = newIndex;
             ApplySelection();
             NotifyInputManagerCursorUpdate();
         }
@@ -121,13 +103,12 @@ public partial class MenuControls : Container
         if (button == null) return;
         
         button.EmitSignal(BaseButton.SignalName.Pressed);
-        EmitSignal(SignalName.ButtonActivated, GetLinearIndex(), button);
+        EmitSignal(SignalName.ButtonActivated, currentIndex, button);
     }
     
     public void ResetToFirstButton()
     {
-        currentRow = 0;
-        currentCol = 0;
+        currentIndex = 0;
         ApplySelection();
         NotifyInputManagerCursorUpdate();
     }
@@ -137,22 +118,7 @@ public partial class MenuControls : Container
         if (index < 0 || index >= buttons.Count)
             return false;
         
-        if (buttons.Count == 4)
-        {
-            currentRow = index / 2;
-            currentCol = index % 2;
-        }
-        else if (buttons.Count == 2)
-        {
-            currentRow = 0;
-            currentCol = index;
-        }
-        else
-        {
-            currentRow = index;
-            currentCol = 0;
-        }
-        
+        currentIndex = index;
         ApplySelection();
         NotifyInputManagerCursorUpdate();
         return true;
@@ -241,17 +207,12 @@ public partial class MenuControls : Container
     
     public int GetLinearIndex()
     {
-        if (buttons.Count == 4)
-            return currentRow * 2 + currentCol;
-        else if (buttons.Count == 2)
-            return currentCol;
-        else
-            return currentRow;
+        return currentIndex;
     }
     
     public Vector2I GetCurrentGridPosition()
     {
-        return new Vector2I(currentCol, currentRow);
+        return new Vector2I(currentIndex % 2, currentIndex / 2); // Just for compatibility
     }
     
     public int GetButtonCount()
@@ -321,8 +282,7 @@ public partial class MenuControls : Container
     {
         wrapNavigation = wrapNav;
         autoActivateOnShow = autoActivate;
-        currentRow = 0;
-        currentCol = 0;
+        currentIndex = 0;
     }
     
     #endregion
@@ -333,8 +293,7 @@ public partial class MenuControls : Container
     {
         var state = new Dictionary<string, Variant>();
         state["active"] = isActive;
-        state["row"] = currentRow;
-        state["col"] = currentCol;
+        state["index"] = currentIndex;
         state["button_count"] = buttons.Count;
         state["button_texts"] = GetAllButtonTexts();
         return state;
@@ -342,10 +301,9 @@ public partial class MenuControls : Container
     
     public void RestoreState(Dictionary<string, Variant> state)
     {
-        if (state.ContainsKey("row") && state.ContainsKey("col"))
+        if (state.ContainsKey("index"))
         {
-            currentRow = state["row"].AsInt32();
-            currentCol = state["col"].AsInt32();
+            currentIndex = state["index"].AsInt32();
         }
         
         if (state.ContainsKey("active"))
@@ -365,8 +323,7 @@ public partial class MenuControls : Container
         FindButtonContainer();
         DiscoverButtons();
         
-        currentRow = 0;
-        currentCol = 0;
+        currentIndex = 0;
         isActive = false;
         
         if (autoActivateOnShow && Visible)
@@ -386,6 +343,12 @@ public partial class MenuControls : Container
         if (buttonContainer == null) return;
         
         CollectButtons(buttonContainer);
+        
+        // Ensure current index is valid
+        if (currentIndex >= buttons.Count)
+        {
+            currentIndex = 0;
+        }
     }
     
     private void CollectButtons(Node parent)
@@ -427,7 +390,7 @@ public partial class MenuControls : Container
         if (selectedButton != null)
         {
             selectedButton.GrabFocus();
-            EmitSignal(SignalName.ButtonSelected, GetLinearIndex(), selectedButton);
+            EmitSignal(SignalName.ButtonSelected, currentIndex, selectedButton);
         }
     }
     
@@ -437,20 +400,6 @@ public partial class MenuControls : Container
         {
             button?.ReleaseFocus();
         }
-    }
-    
-    private BaseButton GetButtonAt(int row, int col)
-    {
-        int index;
-        
-        if (buttons.Count == 4)
-            index = row * 2 + col;
-        else if (buttons.Count == 2)
-            index = col;
-        else
-            index = row;
-        
-        return (index >= 0 && index < buttons.Count) ? buttons[index] : null;
     }
     
     private string GetButtonText(BaseButton button)
@@ -529,7 +478,7 @@ public partial class MenuControls : Container
         GD.Print($"[MenuControls] === Debug Info for {Name} ===");
         GD.Print($"  Active: {isActive}");
         GD.Print($"  Button Count: {buttons.Count}");
-        GD.Print($"  Current Position: ({currentRow}, {currentCol})");
+        GD.Print($"  Current Index: {currentIndex}");
         GD.Print($"  Current Button: {GetCurrentButtonText()}");
         GD.Print($"  Wrap Navigation: {wrapNavigation}");
         
@@ -539,7 +488,8 @@ public partial class MenuControls : Container
             for (int i = 0; i < buttons.Count; i++)
             {
                 var info = GetButtonInfo(i);
-                GD.Print($"    [{i}] {info["text"]} (Name: {info["name"]}, Visible: {info["visible"]}, Disabled: {info["disabled"]})");
+                var marker = i == currentIndex ? " <-- CURRENT" : "";
+                GD.Print($"    [{i}] {info["text"]} (Name: {info["name"]}){marker}");
             }
         }
         GD.Print($"[MenuControls] === End Debug Info ===");

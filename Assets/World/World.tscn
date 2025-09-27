@@ -39,10 +39,8 @@ tile_set = ExtResource("3_rw40b")
 [node name="Marker" type="TileMapLayer" parent="Layers"]
 tile_set = ExtResource("2_3p22m")
 
-[node name="HexControls" type="Node2D" parent="." node_paths=PackedStringArray("cursorLayer", "camera")]
+[node name="HexControls" type="Node2D" parent="." node_paths=PackedStringArray("camera")]
 script = ExtResource("1_2o6ge")
-cursorLayer = NodePath("../Layers/Cursor")
-clickCursorTileId = 0
 camera = NodePath("../Camera2D")
 cameraSpeed = 4.0
 enableDebugWASD = true

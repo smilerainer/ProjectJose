@@ -1,4 +1,4 @@
-// HexGrid.cs - Core abstracted hex grid with corrected vertical offset directions
+// HexGrid.cs - Core hex grid with clear separation of concerns
 using Godot;
 using System.Collections.Generic;
 
@@ -14,24 +14,52 @@ public enum CellLayer
 
 public partial class HexGrid : Node2D
 {
+    #region Signals
+    
     [Signal] public delegate void CellSelectedEventHandler(Vector2I cell);
-
+    [Signal] public delegate void CellHoveredEventHandler(Vector2I cell); // NEW: For hover feedback
+    
+    #endregion
+    
+    #region Layer References
+    
     [Export] private TileMapLayer terrainLayer;
     [Export] private TileMapLayer worldMarkerLayer;
     [Export] private TileMapLayer obstacleLayer;
     [Export] private TileMapLayer entityLayer;
     [Export] private TileMapLayer markerLayer;
     [Export] private TileMapLayer cursorLayer;
-
-    [Export] private bool enableMouseDebug = false;
-
+    
+    #endregion
+    
+    #region State
+    
     private Vector2I selectedCell = new(-999, -999);
+    private Vector2I hoveredCell = new(-999, -999);
     private HashSet<Vector2I> occupiedCells = new();
-
-    public Vector2I Selected => selectedCell;
+    private Dictionary<Vector2I, string> cellMetadata = new(); // NEW: Store arbitrary data per cell
+    
+    [Export] private bool enableMouseDebug = false;
+    [Export] private bool enableHoverTracking = true; // NEW: Toggle hover tracking
+    
+    #endregion
+    
+    #region Properties
+    
+    public Vector2I SelectedCell => selectedCell;
+    public Vector2I HoveredCell => hoveredCell;
     public bool HasSelection => selectedCell != new Vector2I(-999, -999);
-
+    
+    #endregion
+    
+    #region Initialization
+    
     public override void _Ready()
+    {
+        InitializeLayers();
+    }
+    
+    private void InitializeLayers()
     {
         terrainLayer ??= GetNode<TileMapLayer>("Terrain");
         worldMarkerLayer ??= GetNode<TileMapLayer>("WorldMarker");
@@ -39,89 +67,210 @@ public partial class HexGrid : Node2D
         entityLayer ??= GetNode<TileMapLayer>("Entity");
         markerLayer ??= GetNode<TileMapLayer>("Marker");
         cursorLayer ??= GetNode<TileMapLayer>("Cursor");
-
-        // TestAllTileIDs();
     }
-
+    
     public override void _Process(double delta)
     {
         if (enableMouseDebug)
         {
             var mouseCell = GetMouseCell();
-            if (IsValid(mouseCell))
+            if (IsValidCell(mouseCell))
                 GD.Print($"[Debug] Mouse at hex: {mouseCell}");
         }
+        
+        if (enableHoverTracking)
+        {
+            UpdateHoverTracking();
+        }
     }
-
-    #region Core Interface
-
-    public void Select(Vector2I cell)
+    
+    private void UpdateHoverTracking()
     {
-        if (!IsValid(cell)) return;
+        var currentHover = GetMouseCell();
+        if (currentHover != hoveredCell && IsValidCell(currentHover))
+        {
+            hoveredCell = currentHover;
+            EmitSignal(SignalName.CellHovered, hoveredCell);
+        }
+    }
+    
+    #endregion
+    
+    #region Cell Selection Interface
+    
+    public void SelectCell(Vector2I cell)
+    {
+        if (!IsValidCell(cell)) return;
+        
         selectedCell = cell;
-        cursorLayer?.Clear();
-        cursorLayer?.SetCell(cell, 0, Vector2I.Zero, 0);
+        UpdateCursorVisual();
         EmitSignal(SignalName.CellSelected, cell);
     }
-
-    public void Clear()
+    
+    public void ClearSelection()
     {
         selectedCell = new Vector2I(-999, -999);
         cursorLayer?.Clear();
     }
-
-    public Vector2 GetPosition(Vector2I cell) => terrainLayer?.MapToLocal(cell) ?? Vector2.Zero;
-    public Vector2I GetCell(Vector2 worldPos) => terrainLayer?.LocalToMap(ToLocal(worldPos)) ?? Vector2I.Zero;
-    public Vector2I GetMouseCell() => GetCell(GetGlobalMousePosition());
-
-    public bool IsValid(Vector2I cell) => terrainLayer?.GetCellTileData(cell) != null;
-    public bool IsWalkable(Vector2I cell) => IsValid(cell) && !IsBlocked(cell) && !IsOccupied(cell);
-    public bool IsBlocked(Vector2I cell) => obstacleLayer?.GetCellTileData(cell) != null;
-    public bool IsOccupied(Vector2I cell) => occupiedCells.Contains(cell);
-
-    public void SetOccupied(Vector2I cell, bool occupied = true)
-    {
-        if (occupied) occupiedCells.Add(cell);
-        else occupiedCells.Remove(cell);
-    }
-
-    public void ClearTile(Vector2I cell, CellLayer layer)
-    {
-        GetLayer(layer)?.EraseCell(cell);
-    }
-
-    public void Highlight(List<Vector2I> cells, int tileId)
+    
+    public void HighlightCells(List<Vector2I> cells, int tileId)
     {
         cursorLayer?.Clear();
         foreach (var cell in cells)
         {
-            if (IsValid(cell))
+            if (IsValidCell(cell))
                 cursorLayer?.SetCell(cell, 0, Vector2I.Zero, tileId);
         }
     }
+    
+    private void UpdateCursorVisual()
+    {
+        cursorLayer?.Clear();
+        if (HasSelection)
+            cursorLayer?.SetCell(selectedCell, 0, Vector2I.Zero, 0);
+    }
+    
+    #endregion
+    
+    #region Coordinate Conversion
+    
+    public Vector2 CellToWorld(Vector2I cell) => terrainLayer?.MapToLocal(cell) ?? Vector2.Zero;
+    public Vector2I WorldToCell(Vector2 worldPos) => terrainLayer?.LocalToMap(ToLocal(worldPos)) ?? Vector2I.Zero;
+    public Vector2I GetMouseCell() => WorldToCell(GetGlobalMousePosition());
+    
+    #endregion
+    
+    #region Cell State Queries
+    
+    public bool IsValidCell(Vector2I cell) => terrainLayer?.GetCellTileData(cell) != null;
+    public bool IsWalkableCell(Vector2I cell) => IsValidCell(cell) && !IsBlockedCell(cell) && !IsOccupiedCell(cell);
+    public bool IsBlockedCell(Vector2I cell) => obstacleLayer?.GetCellTileData(cell) != null;
+    public bool IsOccupiedCell(Vector2I cell) => occupiedCells.Contains(cell);
+    
+    #endregion
+    
+    #region Cell State Management
+    
+    public void SetCellOccupied(Vector2I cell, bool occupied = true)
+    {
+        if (occupied) 
+            occupiedCells.Add(cell);
+        else 
+            occupiedCells.Remove(cell);
+    }
+    
+    public void SetCellMetadata(Vector2I cell, string key, string value)
+    {
+        var metaKey = $"{cell.X},{cell.Y}:{key}";
+        cellMetadata[cell] = value;
+    }
+    
+    public string GetCellMetadata(Vector2I cell, string key, string defaultValue = "")
+    {
+        return cellMetadata.TryGetValue(cell, out var value) ? value : defaultValue;
+    }
+    
+    #endregion
+    
+    #region Tile Manipulation
     
     public void SetTile(Vector2I cell, CellLayer layer, int tileId)
     {
         GetLayer(layer)?.SetCell(cell, 0, Vector2I.Zero, tileId);
     }
 
-    public void SetTileByCoords(Vector2I cell, CellLayer layer, Vector2I tileCoords)
+    public void SetTileWithCoords(Vector2I cell, CellLayer layer, Vector2I tileCoords)
     {
         GetLayer(layer)?.SetCell(cell, 0, tileCoords, 0);
     }
-
+    
+    public void ClearTile(Vector2I cell, CellLayer layer)
+    {
+        GetLayer(layer)?.EraseCell(cell);
+    }
+    
+    public TileMapLayer GetLayer(CellLayer layer) => layer switch
+    {
+        CellLayer.Terrain => terrainLayer,
+        CellLayer.WorldMarker => worldMarkerLayer,
+        CellLayer.Obstacle => obstacleLayer,
+        CellLayer.Entity => entityLayer,
+        CellLayer.Marker => markerLayer,
+        CellLayer.Cursor => cursorLayer,
+        _ => null
+    };
+    
     #endregion
-
-    #region Pathfinding
-
-    public List<Vector2I> GetNeighbors(Vector2I cell)
+    
+    #region Pathfinding and Navigation
+    
+    public List<Vector2I> GetNeighborsOf(Vector2I cell)
     {
         var neighbors = new List<Vector2I>();
+        var directions = GetDirectionsFor(cell);
+
+        foreach (var dir in directions)
+        {
+            var neighbor = cell + dir;
+            if (IsWalkableCell(neighbor)) 
+                neighbors.Add(neighbor);
+        }
         
+        return neighbors;
+    }
+    
+    public List<Vector2I> GetAllNeighborsOf(Vector2I cell)
+    {
+        var neighbors = new List<Vector2I>();
+        var directions = GetDirectionsFor(cell);
+
+        foreach (var dir in directions)
+        {
+            neighbors.Add(cell + dir);
+        }
+        
+        return neighbors;
+    }
+
+    public List<Vector2I> GetCellsInRange(Vector2I origin, int range)
+    {
+        var reachable = new List<Vector2I>();
+        var visited = new HashSet<Vector2I>();
+        var queue = new Queue<(Vector2I pos, int dist)>();
+
+        queue.Enqueue((origin, 0));
+        visited.Add(origin);
+
+        while (queue.Count > 0)
+        {
+            var (current, dist) = queue.Dequeue();
+            reachable.Add(current);
+
+            if (dist < range)
+            {
+                foreach (var neighbor in GetNeighborsOf(current))
+                {
+                    if (!visited.Contains(neighbor))
+                    {
+                        visited.Add(neighbor);
+                        queue.Enqueue((neighbor, dist + 1));
+                    }
+                }
+            }
+        }
+        return reachable;
+    }
+
+    public int GetDistanceBetween(Vector2I cellA, Vector2I cellB)
+    {
+        var cubeA = OffsetToCube(cellA);
+        var cubeB = OffsetToCube(cellB);
+        return (Mathf.Abs(cubeA.X - cubeB.X) + Mathf.Abs(cubeA.Y - cubeB.Y) + Mathf.Abs(cubeA.Z - cubeB.Z)) / 2;
+    }
+    
+    private Vector2I[] GetDirectionsFor(Vector2I cell)
+    {
         // Fixed for VERTICAL offset hex coordinates
-        // Even columns (X % 2 == 0): hexes are shifted up
-        // Odd columns (X % 2 == 1): hexes are shifted down
-        
         Vector2I[] evenColDirections = { 
             new(0, -1),  // N
             new(1, -1),  // NE
@@ -140,69 +289,9 @@ public partial class HexGrid : Node2D
             new(-1, 0)   // NW
         };
 
-        // Check column parity for vertical offset
         bool isEvenCol = cell.X % 2 == 0;
-        Vector2I[] directions = isEvenCol ? evenColDirections : oddColDirections;
-
-        foreach (var dir in directions)
-        {
-            var neighbor = cell + dir;
-            if (IsWalkable(neighbor)) neighbors.Add(neighbor);
-        }
-        
-        return neighbors;
+        return isEvenCol ? evenColDirections : oddColDirections;
     }
-
-    public List<Vector2I> GetReachable(Vector2I origin, int range)
-    {
-        var reachable = new List<Vector2I>();
-        var visited = new HashSet<Vector2I>();
-        var queue = new Queue<(Vector2I pos, int dist)>();
-
-        queue.Enqueue((origin, 0));
-        visited.Add(origin);
-
-        while (queue.Count > 0)
-        {
-            var (current, dist) = queue.Dequeue();
-            reachable.Add(current);
-
-            if (dist < range)
-            {
-                foreach (var neighbor in GetNeighbors(current))
-                {
-                    if (!visited.Contains(neighbor))
-                    {
-                        visited.Add(neighbor);
-                        queue.Enqueue((neighbor, dist + 1));
-                    }
-                }
-            }
-        }
-        return reachable;
-    }
-
-    public int GetDistance(Vector2I a, Vector2I b)
-    {
-        var cubeA = OffsetToCube(a);
-        var cubeB = OffsetToCube(b);
-        return (Mathf.Abs(cubeA.X - cubeB.X) + Mathf.Abs(cubeA.Y - cubeB.Y) + Mathf.Abs(cubeA.Z - cubeB.Z)) / 2;
-    }
-
-    #endregion
-
-    #region Internal
-
-    public TileMapLayer GetLayer(CellLayer layer) => layer switch
-    {
-        CellLayer.Terrain => terrainLayer,
-        CellLayer.WorldMarker => worldMarkerLayer,
-        CellLayer.Obstacle => obstacleLayer,
-        CellLayer.Entity => entityLayer,
-        CellLayer.Marker => markerLayer,
-        CellLayer.Cursor => cursorLayer,
-        _ => null
-    };
 
     private Vector3I OffsetToCube(Vector2I offset)
     {
@@ -211,42 +300,122 @@ public partial class HexGrid : Node2D
         int z = row;
         return new Vector3I(x, -x - z, z);
     }
-
-    #endregion
     
-    private void TestAllTileIDs()
+    #region Targeting and Highlighting System
+    
+    public void ShowRangeHighlight(List<Vector2I> rangeCells)
     {
-        var testPos = new Vector2I(0, 0);
+        var markerLayer = GetLayer(CellLayer.Marker);
+        markerLayer?.Clear();
         
-        GD.Print("=== Testing TileSet Sources ===");
-        
-        // Check what's actually in the TileSet
-        if (markerLayer?.TileSet != null)
+        foreach (var cell in rangeCells)
         {
-            var tileSet = markerLayer.TileSet;
-            GD.Print($"TileSet has {tileSet.GetSourceCount()} sources");
-            
-            for (int sourceId = 0; sourceId < tileSet.GetSourceCount(); sourceId++)
+            if (IsValidCell(cell))
             {
-                var source = tileSet.GetSource(sourceId);
-                GD.Print($"Source {sourceId}: {source.GetType().Name}");
-                
-                if (source is TileSetAtlasSource atlasSource)
-                {
-                    GD.Print($"Atlas source has {atlasSource.GetTilesCount()} tiles");
-                    
-                    // Try to get tile coordinates
-                    for (int i = 0; i < atlasSource.GetTilesCount(); i++)
-                    {
-                        var tileCoords = atlasSource.GetTileId(i);
-                        GD.Print($"Tile {i}: coords {tileCoords}");
-                        
-                        // Test setting this tile
-                        markerLayer.SetCell(testPos, sourceId, tileCoords, 0);
-                        GD.Print($"Set tile at source {sourceId}, coords {tileCoords}");
-                    }
-                }
+                SetTileWithCoords(cell, CellLayer.Marker, new Vector2I(1, 0)); // Blue range marker
+                GD.Print($"[HexGrid] Range highlight at {cell}");
             }
         }
     }
+    
+    public void ShowAoePreview(Vector2I targetCell, List<Vector2I> aoePattern)
+    {
+        var cursorLayer = GetLayer(CellLayer.Cursor);
+        
+        // Don't clear cursor layer completely, just add AOE highlights
+        foreach (var offset in aoePattern)
+        {
+            var aoeCell = targetCell + offset;
+            if (IsValidCell(aoeCell))
+            {
+                SetTileWithCoords(aoeCell, CellLayer.Cursor, new Vector2I(4, 0)); // Red AOE preview
+                GD.Print($"[HexGrid] AOE preview at {aoeCell}");
+            }
+        }
+    }
+    
+    public void ClearRangeHighlight()
+    {
+        var markerLayer = GetLayer(CellLayer.Marker);
+        markerLayer?.Clear();
+        GD.Print("[HexGrid] Cleared range highlight");
+    }
+    
+    public void ClearAoePreview()
+    {
+        var cursorLayer = GetLayer(CellLayer.Cursor);
+        cursorLayer?.Clear();
+        GD.Print("[HexGrid] Cleared AOE preview");
+    }
+    
+    public List<Vector2I> TransformPattern(List<Vector2I> pattern, Vector2I origin)
+    {
+        var transformedCells = new List<Vector2I>();
+        
+        foreach (var offset in pattern)
+        {
+            var transformedCell = origin + offset;
+            transformedCells.Add(transformedCell);
+            GD.Print($"[HexGrid] Transformed pattern cell: {offset} + {origin} = {transformedCell}");
+        }
+        
+        return transformedCells;
+    }
+    
+    public bool CanTargetSelf(string targetType)
+    {
+        return targetType.ToLower() switch
+        {
+            "self" => true,
+            "ally" => true,
+            "any" => true,
+            _ => false
+        };
+    }
+    
+    #endregion
+    
+    [System.Obsolete("Use SelectCell instead")]
+    public void Select(Vector2I cell) => SelectCell(cell);
+    
+    [System.Obsolete("Use ClearSelection instead")]
+    public void Clear() => ClearSelection();
+    
+    [System.Obsolete("Use CellToWorld instead")]
+    public Vector2 GetPosition(Vector2I cell) => CellToWorld(cell);
+    
+    [System.Obsolete("Use WorldToCell instead")]
+    public Vector2I GetCell(Vector2 worldPos) => WorldToCell(worldPos);
+    
+    [System.Obsolete("Use IsValidCell instead")]
+    public bool IsValid(Vector2I cell) => IsValidCell(cell);
+    
+    [System.Obsolete("Use IsWalkableCell instead")]
+    public bool IsWalkable(Vector2I cell) => IsWalkableCell(cell);
+    
+    [System.Obsolete("Use IsBlockedCell instead")]
+    public bool IsBlocked(Vector2I cell) => IsBlockedCell(cell);
+    
+    [System.Obsolete("Use IsOccupiedCell instead")]
+    public bool IsOccupied(Vector2I cell) => IsOccupiedCell(cell);
+    
+    [System.Obsolete("Use SetCellOccupied instead")]
+    public void SetOccupied(Vector2I cell, bool occupied = true) => SetCellOccupied(cell, occupied);
+    
+    [System.Obsolete("Use SetTileWithCoords instead")]
+    public void SetTileByCoords(Vector2I cell, CellLayer layer, Vector2I tileCoords) => SetTileWithCoords(cell, layer, tileCoords);
+    
+    [System.Obsolete("Use HighlightCells instead")]
+    public void Highlight(List<Vector2I> cells, int tileId) => HighlightCells(cells, tileId);
+    
+    [System.Obsolete("Use GetNeighborsOf instead")]
+    public List<Vector2I> GetNeighbors(Vector2I cell) => GetNeighborsOf(cell);
+    
+    [System.Obsolete("Use GetCellsInRange instead")]
+    public List<Vector2I> GetReachable(Vector2I origin, int range) => GetCellsInRange(origin, range);
+    
+    [System.Obsolete("Use GetDistanceBetween instead")]
+    public int GetDistance(Vector2I a, Vector2I b) => GetDistanceBetween(a, b);
+    
+    #endregion
 }

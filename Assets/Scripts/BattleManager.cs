@@ -1,6 +1,7 @@
 using Godot;
 using System.Linq;
 using System.Collections.Generic;
+using CustomJsonSystem;
 
 public partial class BattleManager : Node
 {
@@ -17,18 +18,29 @@ public partial class BattleManager : Node
     
     private Vector2I playerPosition = new Vector2I(0, 0);
     private Vector2I enemyPosition = new Vector2I(3, 0);
-    private bool movementModeActive = false;
-    private HashSet<Vector2I> validMoves = new();
+    private bool targetSelectionModeActive = false;
     private bool isInSubmenu = false;
     private string currentSubmenuType = "";
+    private string selectedActionOption = "";
+    
+    // Current action flow state
+    private enum ActionPhase
+    {
+        MainMenu,           // Show Move/Skill/Item/Talk buttons
+        SubmenuSelection,   // Show specific options (Fireball/Ice Thorn/etc)
+        TargetSelection,    // Use hex grid to select target
+        ActionComplete      // Process action and return to main menu
+    }
+    
+    private ActionPhase currentPhase = ActionPhase.MainMenu;
     
     #endregion
     
-    #region Menu Options
+    #region Configuration Data
     
-    private readonly string[] skillOptions = { "Fireball", "Ice Thorn", "Shroud" };
-    private readonly string[] itemOptions = { "Potion", "Ether", "Phoenix Down" };
-    private readonly string[] talkOptions = { "Negotiate", "Intimidate", "Flee" };
+    [Export] private string configFilePath = "res://data/battle_config.json";
+    private BattleConfigData battleConfig;
+    private Dictionary<string, ActionConfig> allActions = new();
     
     #endregion
     
@@ -36,6 +48,7 @@ public partial class BattleManager : Node
     
     public override void _Ready()
     {
+        LoadConfiguration();
         FindRequiredNodes();
         
         if (ValidateNodes())
@@ -53,9 +66,33 @@ public partial class BattleManager : Node
         }
     }
     
+    private void LoadConfiguration()
+    {
+        GD.Print($"[Battle] Loading configuration from: {configFilePath}");
+        
+        battleConfig = CustomJsonLoader.LoadBattleConfig(configFilePath);
+        
+        // Build lookup dictionary for all actions
+        allActions.Clear();
+        
+        foreach (var skill in battleConfig.Skills)
+            allActions[skill.Id] = skill;
+        foreach (var item in battleConfig.Items)
+            allActions[item.Id] = item;
+        foreach (var talk in battleConfig.TalkOptions)
+            allActions[talk.Id] = talk;
+        foreach (var move in battleConfig.MoveOptions)
+            allActions[move.Id] = move;
+            
+        GD.Print($"[Battle] Loaded {allActions.Count} total actions:");
+        GD.Print($"  Skills: {battleConfig.Skills.Count}");
+        GD.Print($"  Items: {battleConfig.Items.Count}");
+        GD.Print($"  Talk Options: {battleConfig.TalkOptions.Count}");
+        GD.Print($"  Move Options: {battleConfig.MoveOptions.Count}");
+    }
+    
     private void DelayedStartPlayerTurn()
     {
-        // Add a small delay to ensure CentralInputManager is fully initialized
         GetTree().CreateTimer(0.1).Connect("timeout", 
             new Callable(this, nameof(StartPlayerTurn)), (uint)ConnectFlags.OneShot);
     }
@@ -88,11 +125,15 @@ public partial class BattleManager : Node
     {
         try
         {
-            hexGrid.SetTileByCoords(playerPosition, CellLayer.Entity, new Vector2I(0, 0));
-            hexGrid.SetOccupied(playerPosition, true);
+            hexGrid.SetTileWithCoords(playerPosition, CellLayer.Entity, new Vector2I(0, 0));
+            hexGrid.SetCellOccupied(playerPosition, true);
             
-            hexGrid.SetTileByCoords(enemyPosition, CellLayer.Entity, new Vector2I(1, 0));
-            hexGrid.SetOccupied(enemyPosition, true);
+            hexGrid.SetTileWithCoords(enemyPosition, CellLayer.Entity, new Vector2I(1, 0));
+            hexGrid.SetCellOccupied(enemyPosition, true);
+            
+            // Set metadata for entities using the new system
+            hexGrid.SetCellMetadata(playerPosition, "description", "Player Character");
+            hexGrid.SetCellMetadata(enemyPosition, "description", "Enemy Warrior");
             
             GD.Print($"[Battle] Entities placed - Player: {playerPosition}, Enemy: {enemyPosition}");
         }
@@ -109,9 +150,8 @@ public partial class BattleManager : Node
         if (hexGrid != null)
             hexGrid.CellSelected += OnCellSelected;
         if (hexControls != null)
-            hexControls.MovementCancelled += OnMovementCancelled;
+            hexControls.InteractionCancelled += OnCellInteractionCancelled;
         
-        // Connect to input manager's dynamic menu signal
         if (inputManager != null)
             inputManager.DynamicMenuSelection += OnDynamicMenuSelection;
     }
@@ -122,26 +162,26 @@ public partial class BattleManager : Node
     
     private void StartPlayerTurn()
     {
+        currentPhase = ActionPhase.MainMenu;
+        targetSelectionModeActive = false;
+        isInSubmenu = false;
+        currentSubmenuType = "";
+        selectedActionOption = "";
+        
         if (menuControls != null)
         {
             menuControls.SetActive(true);
-            
-            // Ensure the menu is properly focused
             menuControls.ResetToFirstButton();
             
-            // Give the input manager a moment to detect the active menu
             GetTree().CreateTimer(0.05).Connect("timeout", 
                 new Callable(this, nameof(EnsureMenuFocus)), (uint)ConnectFlags.OneShot);
         }
         
-        isInSubmenu = false;
-        currentSubmenuType = "";
-        GD.Print("[Battle] Player turn started");
+        GD.Print("[Battle] Player turn started - select action type");
     }
     
     private void EnsureMenuFocus()
     {
-        // Notify the input manager that the cursor should be updated
         if (inputManager != null)
         {
             inputManager.NotifyButtonFocusChanged();
@@ -170,15 +210,16 @@ public partial class BattleManager : Node
     
     private void OnButtonPressed(int index, BaseButton button)
     {
-        GD.Print($"[Battle] OnButtonPressed called - Index: {index}, Button: {button.Name}, IsInSubmenu: {isInSubmenu}");
+        GD.Print($"[Battle] OnButtonPressed called - Index: {index}, Button: {button.Name}, Phase: {currentPhase}");
         
-        if (isInSubmenu)
+        switch (currentPhase)
         {
-            HandleSubmenuSelection(index, button);
-        }
-        else
-        {
-            HandleMainMenuSelection(button);
+            case ActionPhase.MainMenu:
+                HandleMainMenuSelection(button);
+                break;
+            case ActionPhase.SubmenuSelection:
+                HandleSubmenuSelection(index, button);
+                break;
         }
     }
     
@@ -188,19 +229,23 @@ public partial class BattleManager : Node
         
         if (buttonText.Contains("move"))
         {
-            StartMovementMode();
+            currentSubmenuType = "move";
+            ShowSubmenu("move", GetActionNames(battleConfig.MoveOptions));
         }
         else if (buttonText.Contains("skill"))
         {
-            ShowSubmenu("skill", skillOptions);
+            currentSubmenuType = "skill";
+            ShowSubmenu("skill", GetActionNames(battleConfig.Skills));
         }
         else if (buttonText.Contains("item"))
         {
-            ShowSubmenu("item", itemOptions);
+            currentSubmenuType = "item";
+            ShowSubmenu("item", GetActionNames(battleConfig.Items));
         }
         else if (buttonText.Contains("talk"))
         {
-            ShowSubmenu("talk", talkOptions);
+            currentSubmenuType = "talk";
+            ShowSubmenu("talk", GetActionNames(battleConfig.TalkOptions));
         }
         else
         {
@@ -209,69 +254,45 @@ public partial class BattleManager : Node
         }
     }
     
+    private string[] GetActionNames(List<ActionConfig> actions)
+    {
+        return actions.Select(a => a.Name).ToArray();
+    }
+    
     private void HandleSubmenuSelection(int index, BaseButton button)
     {
-        string selectedOption = GetSubmenuOption(index);
+        selectedActionOption = GetSubmenuOption(index);
         
-        GD.Print($"[Battle] {currentSubmenuType.ToUpper()} selected: {selectedOption} (Index: {index})");
-        
-        switch (currentSubmenuType)
-        {
-            case "skill":
-                ExecuteSkill(selectedOption);
-                break;
-            case "item":
-                UseItem(selectedOption);
-                break;
-            case "talk":
-                ExecuteTalkAction(selectedOption);
-                break;
-        }
+        GD.Print($"[Battle] {currentSubmenuType.ToUpper()} selected: {selectedActionOption} (Index: {index})");
         
         CloseSubmenu();
-        // Don't call EndPlayerTurn here - let the player continue
+        StartCellInteraction();
     }
     
     private string GetSubmenuOption(int index)
     {
-        string[] currentOptions = currentSubmenuType switch
+        List<ActionConfig> currentOptions = currentSubmenuType switch
         {
-            "skill" => skillOptions,
-            "item" => itemOptions,
-            "talk" => talkOptions,
-            _ => new string[0]
+            "move" => battleConfig.MoveOptions,
+            "skill" => battleConfig.Skills,
+            "item" => battleConfig.Items,
+            "talk" => battleConfig.TalkOptions,
+            _ => new List<ActionConfig>()
         };
         
-        return index < currentOptions.Length ? currentOptions[index] : "Unknown";
+        return index < currentOptions.Count ? currentOptions[index].Name : "Unknown";
     }
     
     private void OnDynamicMenuSelection(int index, string buttonText)
     {
-        if (isInSubmenu)
+        if (currentPhase == ActionPhase.SubmenuSelection)
         {
-            GD.Print($"[Battle] Dynamic menu selection - Index: {index}, Text: {buttonText}");
-            HandleSubmenuSelectionByText(index, buttonText);
+            selectedActionOption = buttonText;
+            GD.Print($"[Battle] Dynamic menu selection - {currentSubmenuType.ToUpper()}: {buttonText} (Index: {index})");
+            
+            CloseSubmenu();
+            StartCellInteraction();
         }
-    }
-    
-    private void HandleSubmenuSelectionByText(int index, string buttonText)
-    {
-        GD.Print($"[Battle] {currentSubmenuType.ToUpper()} selected: {buttonText} (Index: {index})");
-        
-        switch (currentSubmenuType)
-        {
-            case "skill":
-                ExecuteSkill(buttonText);
-                break;
-            case "item":
-                UseItem(buttonText);
-                break;
-            case "talk":
-                ExecuteTalkAction(buttonText);
-                break;
-        }
-        
-        CloseSubmenu();
     }
     
     #endregion
@@ -282,15 +303,12 @@ public partial class BattleManager : Node
     {
         GD.Print($"[Battle] Opening {submenuType} submenu");
         
+        currentPhase = ActionPhase.SubmenuSelection;
         isInSubmenu = true;
-        currentSubmenuType = submenuType;
         
         if (inputManager != null)
         {
-            // The CentralInputManager handles everything for us
             inputManager.SetMenuButtonArray(options);
-            
-            // Connect to the dynamic menu after it's created
             ConnectToDynamicMenu();
         }
         else
@@ -302,7 +320,6 @@ public partial class BattleManager : Node
     
     private void ConnectToDynamicMenu()
     {
-        // Use a timer to ensure the dynamic menu is fully set up
         GetTree().CreateTimer(0.1).Connect("timeout", 
             new Callable(this, nameof(AttemptDynamicMenuConnection)), (uint)ConnectFlags.OneShot);
     }
@@ -314,21 +331,18 @@ public partial class BattleManager : Node
         {
             GD.Print($"[Battle] Found dynamic menu: {dynamicMenu.Name}");
             
-            // Disconnect any existing connection to avoid duplicates
             if (dynamicMenu.IsConnected(MenuControls.SignalName.ButtonActivated, 
                 new Callable(this, nameof(OnButtonPressed))))
             {
                 dynamicMenu.ButtonActivated -= OnButtonPressed;
             }
             
-            // Connect to the dynamic menu
             dynamicMenu.ButtonActivated += OnButtonPressed;
             GD.Print("[Battle] Connected to dynamic menu successfully");
         }
         else
         {
             GD.PrintErr("[Battle] Failed to find dynamic menu - retrying...");
-            // Retry a few more times
             GetTree().CreateTimer(0.1).Connect("timeout", 
                 new Callable(this, nameof(AttemptDynamicMenuConnection)), (uint)ConnectFlags.OneShot);
         }
@@ -338,7 +352,6 @@ public partial class BattleManager : Node
     {
         GD.Print("[Battle] Closing submenu");
         
-        // Disconnect from dynamic menu
         var dynamicMenu = GetDynamicMenuFromInputManager();
         if (dynamicMenu != null)
         {
@@ -350,20 +363,15 @@ public partial class BattleManager : Node
         }
         
         isInSubmenu = false;
-        currentSubmenuType = "";
         
         if (inputManager != null)
         {
             inputManager.ClearDynamicMenu();
         }
-        
-        StartPlayerTurn();
     }
     
     private MenuControls GetDynamicMenuFromInputManager()
     {
-        // Access the dynamic menu through the input manager's method
-        // We need to replicate the GetDynamicMenu logic from CentralInputManager
         var dynamicMenuRoot = GetDynamicMenuRoot();
         if (dynamicMenuRoot == null) return null;
         
@@ -383,8 +391,6 @@ public partial class BattleManager : Node
     
     private Control GetDynamicMenuRoot()
     {
-        // Look for the dynamic menu root in the scene
-        // This should match the dynamicMenuRoot from CentralInputManager
         var ui = GetTree().CurrentScene.GetNodeOrNull<CanvasLayer>("UI");
         if (ui != null)
         {
@@ -392,7 +398,6 @@ public partial class BattleManager : Node
             if (dynamicRoot != null) return dynamicRoot;
         }
         
-        // Fallback: search for it in the main Control node
         var control = GetTree().CurrentScene.GetNodeOrNull<Control>("Control");
         if (control != null)
         {
@@ -400,7 +405,6 @@ public partial class BattleManager : Node
             if (dynamicRoot != null) return dynamicRoot;
         }
         
-        // Last resort: search the entire scene for any Control with "Dynamic" in the name
         return FindDynamicMenuRootRecursive(GetTree().CurrentScene);
     }
     
@@ -408,7 +412,6 @@ public partial class BattleManager : Node
     {
         if (node is Control control && node.Name.ToString().Contains("Dynamic"))
         {
-            // Check if this control contains MenuControls
             foreach (Node child in control.GetChildren())
             {
                 if (child is MarginContainer margin)
@@ -433,187 +436,407 @@ public partial class BattleManager : Node
 
     #endregion
 
-#region Movement System
+    #region Cell Interaction System
 
-    private void StartMovementMode()
+    private void StartCellInteraction()
     {
-        GD.Print("[Battle] Starting movement mode");
+        GD.Print($"[Battle] Starting cell interaction for {currentSubmenuType}: {selectedActionOption}");
 
-        // Deactivate menu first and clear any submenu state
+        currentPhase = ActionPhase.TargetSelection;
+        
         if (menuControls != null)
         {
             menuControls.ReleaseFocus();
             menuControls.SetActive(false);
         }
+
+        targetSelectionModeActive = true;
         
-        // Clear any dynamic menu state
-        if (inputManager != null)
+        var actionConfig = GetActionConfig(selectedActionOption);
+        if (actionConfig == null)
         {
-            inputManager.ClearDynamicMenu();
+            GD.PrintErr($"[Battle] Action config not found for: {selectedActionOption}");
+            StartPlayerTurn();
+            return;
         }
-
-        movementModeActive = true;
-        validMoves = GetAdjacentWalkableTiles(playerPosition);
-        UpdateMovementVisuals();
-
+        
+        GD.Print($"[Battle] Action config loaded - Range: {actionConfig.Range}, TargetType: {actionConfig.TargetType}");
+        GD.Print($"[Battle] Range pattern: {actionConfig.RangePattern.Count} cells, AOE pattern: {actionConfig.AoePattern.Count} cells");
+        
+        var validTargets = CalculateValidTargets(actionConfig);
+        
+        if (hexGrid != null)
+        {
+            hexGrid.ShowRangeHighlight(validTargets);
+        }
+        
         if (hexControls != null)
         {
             hexControls.SetActive(true);
-            hexControls.SetValidMoves(validMoves);
-            hexControls.EnterMovementMode();
+            hexControls.SetValidCells(validTargets.ToHashSet());
             
-            GD.Print($"[Battle] Movement mode ready - InputManager will auto-detect HexGrid context");
+            var aoePattern = actionConfig.AoePattern.Select(p => p.ToVector2I()).ToList();
+            hexControls.SetTargetingInfo(actionConfig.TargetType, aoePattern);
+            
+            hexControls.EnterInteractionMode();
         }
+        
+        GD.Print($"[Battle] Cell interaction ready - {validTargets.Count} valid targets");
     }
     
-    private void ExitMovementMode()
+    private List<Vector2I> CalculateValidTargets(ActionConfig actionConfig)
     {
-        movementModeActive = false;
-        ClearMovementVisuals();
+        var validTargets = new List<Vector2I>();
+        var rangePattern = actionConfig.RangePattern.Select(p => p.ToVector2I()).ToList();
         
-        if (hexControls != null)
+        GD.Print($"[Battle] Calculating valid targets from player position {playerPosition}");
+        
+        if (rangePattern.Count == 0)
         {
-            hexControls.ExitMovementMode(playerPosition);
-            hexControls.SetActive(false); // Deactivate hex controls
+            GD.Print("[Battle] No range pattern defined, using default adjacent pattern");
+            rangePattern = new List<Vector2I>
+            {
+                new(1, 0), new(-1, 0), new(0, 1), new(0, -1), new(1, -1), new(-1, -1)
+            };
         }
         
-        GD.Print("[Battle] Exited movement mode");
-        StartPlayerTurn();
+        foreach (var offset in rangePattern)
+        {
+            var targetCell = playerPosition + offset;
+            
+            if (hexGrid != null && hexGrid.IsValidCell(targetCell))
+            {
+                bool canTarget = CanTargetCell(targetCell, actionConfig.TargetType);
+                
+                if (canTarget)
+                {
+                    validTargets.Add(targetCell);
+                    GD.Print($"[Battle] Valid target: {targetCell} (offset {offset})");
+                }
+                else
+                {
+                    GD.Print($"[Battle] Invalid target: {targetCell} (blocked by targeting rules)");
+                }
+            }
+            else
+            {
+                GD.Print($"[Battle] Invalid target: {targetCell} (off grid or invalid)");
+            }
+        }
+        
+        if (hexGrid != null && hexGrid.CanTargetSelf(actionConfig.TargetType))
+        {
+            if (!validTargets.Contains(playerPosition))
+            {
+                validTargets.Add(playerPosition);
+                GD.Print($"[Battle] Added self-target: {playerPosition}");
+            }
+        }
+        
+        return validTargets;
     }
     
-    private void OnMovementCancelled()
+    private bool CanTargetCell(Vector2I cell, string targetType)
     {
-        GD.Print("[Battle] Movement cancelled by player");
-        ExitMovementMode();
+        switch (targetType.ToLower())
+        {
+            case "self":
+                return cell == playerPosition;
+                
+            case "ally":
+                return cell == playerPosition;
+                
+            case "enemy":
+                return cell == enemyPosition;
+                
+            case "movement":
+                return hexGrid != null && !hexGrid.IsOccupiedCell(cell);
+                
+            case "area":
+            case "any":
+                return true;
+                
+            default:
+                GD.Print($"[Battle] Unknown target type: {targetType}");
+                return true;
+        }
+    }
+    
+    private void OnCellInteractionCancelled()
+    {
+        GD.Print("[Battle] Cell interaction cancelled by player");
+        ExitCellInteraction();
+        StartPlayerTurn();
     }
     
     private void OnCellSelected(Vector2I cell)
     {
-        if (!movementModeActive) return;
+        if (!targetSelectionModeActive) return;
         
-        if (validMoves.Contains(cell))
+        GD.Print($"[Battle] Cell selected: {cell}");
+        
+        PrintCellContents(cell);
+        
+        var actionConfig = GetActionConfig(selectedActionOption);
+        if (actionConfig != null && actionConfig.AoePattern.Count > 0)
         {
-            ExecuteMove(cell);
-        }
-        else
-        {
-            GD.Print($"[Battle] Invalid move to {cell}");
-        }
-    }
-    
-    private void ExecuteMove(Vector2I targetPosition)
-    {
-        if (!validMoves.Contains(targetPosition))
-        {
-            GD.Print($"[Battle] Cannot move to {targetPosition} - invalid");
-            return;
+            ShowAoeEffect(cell, actionConfig);
         }
         
-        GD.Print($"[Battle] Moving player from {playerPosition} to {targetPosition}");
+        ExecuteAction(cell);
         
-        hexGrid.ClearTile(playerPosition, CellLayer.Entity);
-        hexGrid.SetOccupied(playerPosition, false);
-        
-        playerPosition = targetPosition;
-        hexGrid.SetTileByCoords(playerPosition, CellLayer.Entity, new Vector2I(0, 0));
-        hexGrid.SetOccupied(playerPosition, true);
-        
-        ExitMovementMode();
+        ExitCellInteraction();
         EndPlayerTurn();
     }
     
-    private HashSet<Vector2I> GetAdjacentWalkableTiles(Vector2I center)
+    private void ShowAoeEffect(Vector2I targetCell, ActionConfig actionConfig)
     {
-        var adjacent = new HashSet<Vector2I>();
-        var neighbors = hexGrid.GetNeighbors(center);
+        GD.Print($"=== AOE EFFECT AT {targetCell} ===");
         
-        foreach (var neighbor in neighbors)
+        var aoePattern = actionConfig.AoePattern.Select(p => p.ToVector2I()).ToList();
+        
+        foreach (var offset in aoePattern)
         {
-            adjacent.Add(neighbor);
+            var affectedCell = targetCell + offset;
+            GD.Print($"  AOE affects cell: {affectedCell} (offset {offset})");
+            
+            if (affectedCell == playerPosition)
+                GD.Print($"    - Player affected!");
+            if (affectedCell == enemyPosition)
+                GD.Print($"    - Enemy affected!");
         }
         
-        return adjacent;
+        GD.Print("========================");
     }
     
-    private void UpdateMovementVisuals()
+    private void PrintCellContents(Vector2I cell)
     {
-        var markerLayer = hexGrid.GetLayer(CellLayer.Marker);
-        markerLayer?.Clear();
+        GD.Print($"=== CELL CONTENTS AT {cell} ===");
         
-        foreach (var move in validMoves)
+        foreach (CellLayer layer in System.Enum.GetValues<CellLayer>())
         {
-            hexGrid.SetTileByCoords(move, CellLayer.Marker, new Vector2I(1, 0));
+            var tileLayer = hexGrid.GetLayer(layer);
+            if (tileLayer != null)
+            {
+                var sourceId = tileLayer.GetCellSourceId(cell);
+                var atlasCoords = tileLayer.GetCellAtlasCoords(cell);
+                
+                if (sourceId != -1)
+                {
+                    string description = GetTileDescription(layer, atlasCoords);
+                    GD.Print($"  {layer}: {description} (Source: {sourceId}, Atlas: {atlasCoords})");
+                }
+            }
+        }
+        
+        bool isOccupied = hexGrid.IsOccupiedCell(cell);
+        GD.Print($"  Occupied: {isOccupied}");
+        
+        if (cell == playerPosition)
+            GD.Print($"  Entity: Player");
+        if (cell == enemyPosition)
+            GD.Print($"  Entity: Enemy");
+            
+        var metadata = hexGrid.GetCellMetadata(cell, "description");
+        if (!string.IsNullOrEmpty(metadata))
+            GD.Print($"  Description: {metadata}");
+            
+        GD.Print("========================");
+    }
+    
+    private string GetTileDescription(CellLayer layer, Vector2I atlasCoords)
+    {
+        return layer switch
+        {
+            CellLayer.Entity when atlasCoords == Vector2I.Zero => "Player (Yellow)",
+            CellLayer.Entity when atlasCoords == new Vector2I(1, 0) => "Enemy (Red)",
+            CellLayer.Marker when atlasCoords == new Vector2I(1, 0) => "Movement Marker",
+            CellLayer.Cursor => "Cursor",
+            _ => $"Tile at {atlasCoords}"
+        };
+    }
+    
+    private void ExecuteAction(Vector2I targetCell)
+    {
+        var actionConfig = GetActionConfig(selectedActionOption);
+        if (actionConfig == null)
+        {
+            GD.PrintErr($"[Battle] Action config not found for: {selectedActionOption}");
+            return;
+        }
+        
+        switch (currentSubmenuType)
+        {
+            case "move":
+                ExecuteMove(targetCell, actionConfig);
+                break;
+            case "skill":
+                ExecuteSkill(selectedActionOption, targetCell, actionConfig);
+                break;
+            case "item":
+                UseItem(selectedActionOption, targetCell, actionConfig);
+                break;
+            case "talk":
+                ExecuteTalkAction(selectedActionOption, targetCell, actionConfig);
+                break;
         }
     }
     
-    private void ClearMovementVisuals()
+    private ActionConfig GetActionConfig(string actionName)
     {
-        var markerLayer = hexGrid.GetLayer(CellLayer.Marker);
-        markerLayer?.Clear();
+        foreach (var kvp in allActions)
+        {
+            if (kvp.Value.Name == actionName)
+                return kvp.Value;
+        }
+        return null;
+    }
+    
+    private void ExitCellInteraction()
+    {
+        targetSelectionModeActive = false;
+        currentPhase = ActionPhase.ActionComplete;
         
-        var cursorLayer = hexGrid.GetLayer(CellLayer.Cursor);
-        cursorLayer?.Clear();
+        if (hexGrid != null)
+        {
+            hexGrid.ClearRangeHighlight();
+            hexGrid.ClearAoePreview();
+        }
+        
+        if (hexControls != null)
+        {
+            hexControls.ExitInteractionMode(playerPosition);
+            hexControls.SetActive(false);
+        }
+        
+        GD.Print("[Battle] Exited cell interaction");
     }
     
     #endregion
     
     #region Battle Actions
     
-    private void ExecuteSkill(string skillName)
+    private void ExecuteMove(Vector2I targetPosition, ActionConfig moveConfig)
     {
-        switch (skillName)
+        var validMoves = CalculateValidTargets(moveConfig);
+        
+        if (!validMoves.Contains(targetPosition))
         {
-            case "Fireball":
-                GD.Print("[Battle] Casting Fireball!");
-                break;
-            case "Ice Thorn":
-                GD.Print("[Battle] Casting Ice Thorn!");
-                break;
-            case "Shroud":
-                GD.Print("[Battle] Casting Shroud!");
-                break;
-            default:
-                GD.Print($"[Battle] Unknown skill: {skillName}");
-                break;
+            GD.Print($"[Battle] Cannot move to {targetPosition} - invalid position");
+            return;
+        }
+        
+        GD.Print($"[Battle] Moving player from {playerPosition} to {targetPosition}");
+        GD.Print($"[Battle] Move type: {moveConfig.Name} - {moveConfig.Description}");
+        
+        hexGrid.ClearTile(playerPosition, CellLayer.Entity);
+        hexGrid.SetCellOccupied(playerPosition, false);
+        hexGrid.SetCellMetadata(playerPosition, "description", "");
+        
+        playerPosition = targetPosition;
+        hexGrid.SetTileWithCoords(playerPosition, CellLayer.Entity, new Vector2I(0, 0));
+        hexGrid.SetCellOccupied(playerPosition, true);
+        hexGrid.SetCellMetadata(playerPosition, "description", "Player Character");
+        
+        GD.Print($"[Battle] Move action '{moveConfig.Name}' completed");
+        
+        if (moveConfig.Cost > 0)
+        {
+            GD.Print($"[Battle] Move cost: {moveConfig.Cost}");
         }
     }
     
-    private void UseItem(string itemName)
+    private void ExecuteSkill(string skillName, Vector2I targetCell, ActionConfig skillConfig)
     {
-        switch (itemName)
+        GD.Print($"[Battle] Executing skill '{skillName}' on target {targetCell}");
+        GD.Print($"[Battle] {skillConfig.Description}");
+        GD.Print($"[Battle] Target type: {skillConfig.TargetType}");
+        
+        if (skillConfig.Damage > 0)
         {
-            case "Potion":
-                GD.Print("[Battle] Using Potion!");
-                break;
-            case "Ether":
-                GD.Print("[Battle] Using Ether!");
-                break;
-            case "Phoenix Down":
-                GD.Print("[Battle] Using Phoenix Down!");
-                break;
-            default:
-                GD.Print($"[Battle] Unknown item: {itemName}");
-                break;
+            GD.Print($"[Battle] Base damage: {skillConfig.Damage}");
         }
+        
+        if (!string.IsNullOrEmpty(skillConfig.StatusEffect))
+        {
+            GD.Print($"[Battle] Applying {skillConfig.StatusEffect} for {skillConfig.StatusDuration} turns!");
+        }
+        
+        if (skillConfig.Cost > 0)
+        {
+            GD.Print($"[Battle] Skill cost: {skillConfig.Cost}");
+        }
+        
+        GD.Print($"[Battle] Range pattern: {skillConfig.RangePattern.Count} cells");
+        GD.Print($"[Battle] AOE pattern: {skillConfig.AoePattern.Count} cells");
     }
     
-    private void ExecuteTalkAction(string action)
+    private void UseItem(string itemName, Vector2I targetCell, ActionConfig itemConfig)
     {
-        switch (action)
+        GD.Print($"[Battle] Using item '{itemName}' on target {targetCell}");
+        GD.Print($"[Battle] {itemConfig.Description}");
+        GD.Print($"[Battle] Target type: {itemConfig.TargetType}");
+        
+        if (itemConfig.HealAmount > 0)
         {
-            case "Negotiate":
-                GD.Print("[Battle] Attempting to negotiate!");
-                break;
-            case "Intimidate":
-                GD.Print("[Battle] Attempting to intimidate!");
-                break;
-            case "Flee":
-                GD.Print("[Battle] Attempting to flee!");
-                break;
-            default:
-                GD.Print($"[Battle] Unknown talk action: {action}");
-                break;
+            GD.Print($"[Battle] Healing {itemConfig.HealAmount} HP!");
         }
+        
+        if (itemConfig.Damage > 0)
+        {
+            GD.Print($"[Battle] Dealing {itemConfig.Damage} damage!");
+        }
+        
+        if (!string.IsNullOrEmpty(itemConfig.StatusEffect))
+        {
+            GD.Print($"[Battle] Applying {itemConfig.StatusEffect}!");
+        }
+        
+        if (itemConfig.UsesRemaining > 0)
+        {
+            itemConfig.UsesRemaining--;
+            GD.Print($"[Battle] {itemName} remaining uses: {itemConfig.UsesRemaining}");
+        }
+        else if (itemConfig.UsesRemaining == 0)
+        {
+            GD.Print($"[Battle] {itemName} is used up!");
+        }
+        else
+        {
+            GD.Print($"[Battle] {itemName} has unlimited uses");
+        }
+        
+        GD.Print($"[Battle] Range pattern: {itemConfig.RangePattern.Count} cells");
+        GD.Print($"[Battle] AOE pattern: {itemConfig.AoePattern.Count} cells");
+    }
+    
+    private void ExecuteTalkAction(string action, Vector2I targetCell, ActionConfig talkConfig)
+    {
+        GD.Print($"[Battle] Executing talk action '{action}' on target {targetCell}");
+        GD.Print($"[Battle] Target type: {talkConfig.TargetType}");
+        
+        if (!string.IsNullOrEmpty(talkConfig.Dialogue))
+        {
+            GD.Print($"[Battle] Player says: \"{talkConfig.Dialogue}\"");
+        }
+        
+        if (talkConfig.FriendshipChange != 0)
+        {
+            GD.Print($"[Battle] Friendship change: {(talkConfig.FriendshipChange > 0 ? "+" : "")}{talkConfig.FriendshipChange}");
+        }
+        
+        if (talkConfig.ReputationChange != 0)
+        {
+            GD.Print($"[Battle] Reputation change: {(talkConfig.ReputationChange > 0 ? "+" : "")}{talkConfig.ReputationChange}");
+        }
+        
+        if (talkConfig.Cost > 0)
+        {
+            GD.Print($"[Battle] Talk action cost: {talkConfig.Cost}");
+        }
+        
+        GD.Print($"[Battle] Range pattern: {talkConfig.RangePattern.Count} cells");
+        GD.Print($"[Battle] AOE pattern: {talkConfig.AoePattern.Count} cells");
     }
     
     #endregion
