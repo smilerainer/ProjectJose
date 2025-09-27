@@ -43,12 +43,21 @@ public partial class BattleManager : Node
             SetupInitialState();
             SetupEntities();
             ConnectSignals();
-            StartPlayerTurn();
+            
+            // Delay the initial player turn to ensure all systems are ready
+            CallDeferred(nameof(DelayedStartPlayerTurn));
         }
         else
         {
             GD.PrintErr("[Battle] Failed to find required nodes");
         }
+    }
+    
+    private void DelayedStartPlayerTurn()
+    {
+        // Add a small delay to ensure CentralInputManager is fully initialized
+        GetTree().CreateTimer(0.1).Connect("timeout", 
+            new Callable(this, nameof(StartPlayerTurn)), (uint)ConnectFlags.OneShot);
     }
     
     private void FindRequiredNodes()
@@ -80,10 +89,10 @@ public partial class BattleManager : Node
         try
         {
             hexGrid.SetTileByCoords(playerPosition, CellLayer.Entity, new Vector2I(0, 0));
-            hexGrid.SetOccupied(playerPosition);
+            hexGrid.SetOccupied(playerPosition, true);
             
             hexGrid.SetTileByCoords(enemyPosition, CellLayer.Entity, new Vector2I(1, 0));
-            hexGrid.SetOccupied(enemyPosition);
+            hexGrid.SetOccupied(enemyPosition, true);
             
             GD.Print($"[Battle] Entities placed - Player: {playerPosition}, Enemy: {enemyPosition}");
         }
@@ -101,6 +110,10 @@ public partial class BattleManager : Node
             hexGrid.CellSelected += OnCellSelected;
         if (hexControls != null)
             hexControls.MovementCancelled += OnMovementCancelled;
+        
+        // Connect to input manager's dynamic menu signal
+        if (inputManager != null)
+            inputManager.DynamicMenuSelection += OnDynamicMenuSelection;
     }
     
     #endregion
@@ -112,11 +125,27 @@ public partial class BattleManager : Node
         if (menuControls != null)
         {
             menuControls.SetActive(true);
+            
+            // Ensure the menu is properly focused
+            menuControls.ResetToFirstButton();
+            
+            // Give the input manager a moment to detect the active menu
+            GetTree().CreateTimer(0.05).Connect("timeout", 
+                new Callable(this, nameof(EnsureMenuFocus)), (uint)ConnectFlags.OneShot);
         }
         
         isInSubmenu = false;
         currentSubmenuType = "";
         GD.Print("[Battle] Player turn started");
+    }
+    
+    private void EnsureMenuFocus()
+    {
+        // Notify the input manager that the cursor should be updated
+        if (inputManager != null)
+        {
+            inputManager.NotifyButtonFocusChanged();
+        }
     }
     
     private void EndPlayerTurn()
@@ -131,15 +160,7 @@ public partial class BattleManager : Node
     
     private void StartEnemyTurn()
     {
-        GD.Print("[Battle] Enemy turn started");
-        
-        GetTree().CreateTimer(1.0).Connect("timeout", 
-            new Callable(this, nameof(ExecuteEnemyAction)));
-    }
-    
-    private void ExecuteEnemyAction()
-    {
-        GD.Print("[Battle] Enemy attacks!");
+        GD.Print("[Battle] Enemy turn started - skipping back to player");
         StartPlayerTurn();
     }
     
@@ -149,6 +170,8 @@ public partial class BattleManager : Node
     
     private void OnButtonPressed(int index, BaseButton button)
     {
+        GD.Print($"[Battle] OnButtonPressed called - Index: {index}, Button: {button.Name}, IsInSubmenu: {isInSubmenu}");
+        
         if (isInSubmenu)
         {
             HandleSubmenuSelection(index, button);
@@ -206,6 +229,7 @@ public partial class BattleManager : Node
         }
         
         CloseSubmenu();
+        // Don't call EndPlayerTurn here - let the player continue
     }
     
     private string GetSubmenuOption(int index)
@@ -221,6 +245,35 @@ public partial class BattleManager : Node
         return index < currentOptions.Length ? currentOptions[index] : "Unknown";
     }
     
+    private void OnDynamicMenuSelection(int index, string buttonText)
+    {
+        if (isInSubmenu)
+        {
+            GD.Print($"[Battle] Dynamic menu selection - Index: {index}, Text: {buttonText}");
+            HandleSubmenuSelectionByText(index, buttonText);
+        }
+    }
+    
+    private void HandleSubmenuSelectionByText(int index, string buttonText)
+    {
+        GD.Print($"[Battle] {currentSubmenuType.ToUpper()} selected: {buttonText} (Index: {index})");
+        
+        switch (currentSubmenuType)
+        {
+            case "skill":
+                ExecuteSkill(buttonText);
+                break;
+            case "item":
+                UseItem(buttonText);
+                break;
+            case "talk":
+                ExecuteTalkAction(buttonText);
+                break;
+        }
+        
+        CloseSubmenu();
+    }
+    
     #endregion
     
     #region Submenu Management
@@ -232,15 +285,13 @@ public partial class BattleManager : Node
         isInSubmenu = true;
         currentSubmenuType = submenuType;
         
-        if (menuControls != null)
-        {
-            menuControls.SetActive(false);
-        }
-        
         if (inputManager != null)
         {
+            // The CentralInputManager handles everything for us
             inputManager.SetMenuButtonArray(options);
-            ConnectToSubmenu();
+            
+            // Connect to the dynamic menu after it's created
+            ConnectToDynamicMenu();
         }
         else
         {
@@ -249,21 +300,55 @@ public partial class BattleManager : Node
         }
     }
     
-    private void ConnectToSubmenu()
+    private void ConnectToDynamicMenu()
     {
-        var dynamicMenu = FindDynamicMenu();
+        // Use a timer to ensure the dynamic menu is fully set up
+        GetTree().CreateTimer(0.1).Connect("timeout", 
+            new Callable(this, nameof(AttemptDynamicMenuConnection)), (uint)ConnectFlags.OneShot);
+    }
+    
+    private void AttemptDynamicMenuConnection()
+    {
+        var dynamicMenu = GetDynamicMenuFromInputManager();
         if (dynamicMenu != null)
         {
-            if (!dynamicMenu.IsConnected(MenuControls.SignalName.ButtonActivated, 
+            GD.Print($"[Battle] Found dynamic menu: {dynamicMenu.Name}");
+            
+            // Disconnect any existing connection to avoid duplicates
+            if (dynamicMenu.IsConnected(MenuControls.SignalName.ButtonActivated, 
                 new Callable(this, nameof(OnButtonPressed))))
             {
-                dynamicMenu.ButtonActivated += OnButtonPressed;
+                dynamicMenu.ButtonActivated -= OnButtonPressed;
             }
+            
+            // Connect to the dynamic menu
+            dynamicMenu.ButtonActivated += OnButtonPressed;
+            GD.Print("[Battle] Connected to dynamic menu successfully");
+        }
+        else
+        {
+            GD.PrintErr("[Battle] Failed to find dynamic menu - retrying...");
+            // Retry a few more times
+            GetTree().CreateTimer(0.1).Connect("timeout", 
+                new Callable(this, nameof(AttemptDynamicMenuConnection)), (uint)ConnectFlags.OneShot);
         }
     }
     
     private void CloseSubmenu()
     {
+        GD.Print("[Battle] Closing submenu");
+        
+        // Disconnect from dynamic menu
+        var dynamicMenu = GetDynamicMenuFromInputManager();
+        if (dynamicMenu != null)
+        {
+            if (dynamicMenu.IsConnected(MenuControls.SignalName.ButtonActivated, 
+                new Callable(this, nameof(OnButtonPressed))))
+            {
+                dynamicMenu.ButtonActivated -= OnButtonPressed;
+            }
+        }
+        
         isInSubmenu = false;
         currentSubmenuType = "";
         
@@ -275,37 +360,109 @@ public partial class BattleManager : Node
         StartPlayerTurn();
     }
     
-    private MenuControls FindDynamicMenu()
+    private MenuControls GetDynamicMenuFromInputManager()
     {
-        var controlNode = GetTree().CurrentScene.GetNodeOrNull<Control>("Control");
-        if (controlNode != null)
+        // Access the dynamic menu through the input manager's method
+        // We need to replicate the GetDynamicMenu logic from CentralInputManager
+        var dynamicMenuRoot = GetDynamicMenuRoot();
+        if (dynamicMenuRoot == null) return null;
+        
+        foreach (Node child in dynamicMenuRoot.GetChildren())
         {
-            return FindMenuControlsInTree(controlNode);
+            if (child is MarginContainer margin)
+            {
+                foreach (Node grandchild in margin.GetChildren())
+                {
+                    if (grandchild is MenuControls menu)
+                        return menu;
+                }
+            }
         }
         return null;
     }
     
+    private Control GetDynamicMenuRoot()
+    {
+        // Look for the dynamic menu root in the scene
+        // This should match the dynamicMenuRoot from CentralInputManager
+        var ui = GetTree().CurrentScene.GetNodeOrNull<CanvasLayer>("UI");
+        if (ui != null)
+        {
+            var dynamicRoot = ui.GetNodeOrNull<Control>("DynamicMenuRoot");
+            if (dynamicRoot != null) return dynamicRoot;
+        }
+        
+        // Fallback: search for it in the main Control node
+        var control = GetTree().CurrentScene.GetNodeOrNull<Control>("Control");
+        if (control != null)
+        {
+            var dynamicRoot = control.GetNodeOrNull<Control>("DynamicMenuRoot");
+            if (dynamicRoot != null) return dynamicRoot;
+        }
+        
+        // Last resort: search the entire scene for any Control with "Dynamic" in the name
+        return FindDynamicMenuRootRecursive(GetTree().CurrentScene);
+    }
+    
+    private Control FindDynamicMenuRootRecursive(Node node)
+    {
+        if (node is Control control && node.Name.ToString().Contains("Dynamic"))
+        {
+            // Check if this control contains MenuControls
+            foreach (Node child in control.GetChildren())
+            {
+                if (child is MarginContainer margin)
+                {
+                    foreach (Node grandchild in margin.GetChildren())
+                    {
+                        if (grandchild is MenuControls)
+                            return control;
+                    }
+                }
+            }
+        }
+        
+        foreach (Node child in node.GetChildren())
+        {
+            var result = FindDynamicMenuRootRecursive(child);
+            if (result != null) return result;
+        }
+        
+        return null;
+    }
+
     #endregion
-    
-    #region Movement System
-    
+
+#region Movement System
+
     private void StartMovementMode()
     {
         GD.Print("[Battle] Starting movement mode");
-        
+
+        // Deactivate menu first and clear any submenu state
         if (menuControls != null)
         {
+            menuControls.ReleaseFocus();
             menuControls.SetActive(false);
         }
         
+        // Clear any dynamic menu state
+        if (inputManager != null)
+        {
+            inputManager.ClearDynamicMenu();
+        }
+
         movementModeActive = true;
         validMoves = GetAdjacentWalkableTiles(playerPosition);
         UpdateMovementVisuals();
-        
+
         if (hexControls != null)
         {
+            hexControls.SetActive(true);
             hexControls.SetValidMoves(validMoves);
             hexControls.EnterMovementMode();
+            
+            GD.Print($"[Battle] Movement mode ready - InputManager will auto-detect HexGrid context");
         }
     }
     
@@ -317,6 +474,7 @@ public partial class BattleManager : Node
         if (hexControls != null)
         {
             hexControls.ExitMovementMode(playerPosition);
+            hexControls.SetActive(false); // Deactivate hex controls
         }
         
         GD.Print("[Battle] Exited movement mode");
@@ -358,9 +516,10 @@ public partial class BattleManager : Node
         
         playerPosition = targetPosition;
         hexGrid.SetTileByCoords(playerPosition, CellLayer.Entity, new Vector2I(0, 0));
-        hexGrid.SetOccupied(playerPosition);
+        hexGrid.SetOccupied(playerPosition, true);
         
         ExitMovementMode();
+        EndPlayerTurn();
     }
     
     private HashSet<Vector2I> GetAdjacentWalkableTiles(Vector2I center)

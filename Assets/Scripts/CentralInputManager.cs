@@ -25,11 +25,12 @@ public partial class CentralInputManager : Node2D
     [Export] private bool enableCursor = true;
     [Export] private bool enableCursorSnapping = true;
     [Export] private Control dynamicMenuRoot;
+    [Signal] public delegate void DynamicMenuSelectionEventHandler(int index, string buttonText);
     
     #endregion
-    
+
     #region Constants
-    
+
     private const float CURSOR_SPEED = 1200.0f;
     private const float SNAP_DISTANCE = 3.0f;
     
@@ -73,7 +74,11 @@ public partial class CentralInputManager : Node2D
     
     #region Public Properties
     
-    public InputContext CurrentContext => currentContext;
+    public InputContext CurrentContext 
+    { 
+        get => currentContext; 
+        set => currentContext = value; 
+    }
     public Node ActiveControl => currentActiveControl;
     
     #endregion
@@ -198,11 +203,30 @@ public partial class CentralInputManager : Node2D
         }
         else
         {
-            currentContext = InputContext.Mixed;
-            // Fixed: Cast all to Node type
-            currentActiveControl = (Node)activeNovel.FirstOrDefault() ?? 
-                                  (Node)activeMenus.FirstOrDefault() ?? 
-                                  (Node)activeHex.FirstOrDefault();
+            // FIXED: Prioritize HexGrid when multiple controls are active
+            // This handles the case where both menu and hex controls might be active
+            if (activeHex.Count > 0)
+            {
+                currentContext = InputContext.HexGrid;
+                currentActiveControl = activeHex[0];
+            }
+            else if (activeNovel.Count > 0)
+            {
+                currentContext = InputContext.Novel;
+                currentActiveControl = activeNovel[0];
+            }
+            else if (activeMenus.Count > 0)
+            {
+                currentContext = InputContext.Menu;
+                currentActiveControl = activeMenus[0];
+            }
+            else
+            {
+                currentContext = InputContext.Mixed;
+                currentActiveControl = (Node)activeNovel.FirstOrDefault() ?? 
+                                      (Node)activeMenus.FirstOrDefault() ?? 
+                                      (Node)activeHex.FirstOrDefault();
+            }
         }
     }
     
@@ -276,7 +300,9 @@ public partial class CentralInputManager : Node2D
     
     private void HandleHexInput(HexControls hex, InputEvent @event)
     {
-        // Hex input handling if needed
+        // Let HexControls handle its own input - it already has proper input handling
+        // The HexControls._Input method will process the input appropriately
+        // We don't need to duplicate the input logic here
     }
     
     private void HandleNovelInput(NovelControls novel, InputEvent @event)
@@ -324,7 +350,7 @@ public partial class CentralInputManager : Node2D
                IsKey(@event, Key.Enter) || 
                IsKey(@event, Key.KpEnter);
     }
-    
+
     private bool TryHandleCancel(InputEvent @event, MenuControls menu)
     {
         if (@event.IsActionPressed("ui_cancel") || IsKey(@event, Key.Escape))
@@ -334,6 +360,7 @@ public partial class CentralInputManager : Node2D
             {
                 ClearSubmenu();
                 GetViewport().SetInputAsHandled();
+                GD.Print("[Input] Cancelled");
                 return true;
             }
         }
@@ -424,13 +451,17 @@ public partial class CentralInputManager : Node2D
         ClearSubmenu();
     }
     
+
+    // Modify the NotifySubmenuSelection method:
     private void NotifySubmenuSelection(MenuControls menu)
     {
         int index = menu.GetLinearIndex();
         string text = menu.GetCurrentButtonText();
         
-        // This would notify a menu system or battle manager
-        // For now, just activate the button
+        // Emit our custom signal for external listeners
+        EmitSignal(SignalName.DynamicMenuSelection, index, text);
+        
+        // Also activate the button for other systems that might need it
         menu.ActivateCurrentButton();
     }
     
