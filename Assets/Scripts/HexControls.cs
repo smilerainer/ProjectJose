@@ -1,4 +1,4 @@
-// HexControls.cs - Fixed timing and draw order
+// HexControls.cs - UI interface that uses HexGrid for math operations
 using Godot;
 using System.Linq;
 using System.Collections.Generic;
@@ -18,6 +18,10 @@ public partial class HexControls : Node2D
     [Export] private bool instantCameraMove = false;
     #endregion
 
+    #region Dependencies
+    private HexGrid hexGrid; // Uses HexGrid for all math operations
+    #endregion
+
     #region State
     private Vector2I cursorPosition = Vector2I.Zero;
     private bool isActive = false;
@@ -29,11 +33,6 @@ public partial class HexControls : Node2D
     private string targetType = "";
     private bool canTargetSelf = false;
     private bool justEntered = false;
-    #endregion
-
-    #region Components
-    private HexGrid hexGrid;
-    private TileMapLayer cursorLayer;
     private Tween cameraTween;
     #endregion
 
@@ -47,35 +46,36 @@ public partial class HexControls : Node2D
     public override void _Ready()
     {
         hexGrid = GetParent<HexGrid>();
-        if (hexGrid != null)
+        if (hexGrid == null)
         {
-            cursorLayer = hexGrid.GetLayer(CellLayer.Cursor);
-            if (enableDebugLogs) GD.Print($"[HexControls] Using HexGrid's cursor layer");
+            GD.PrintErr("[HexControls] ERROR: No HexGrid parent found!");
+            return;
         }
         
         camera ??= GetViewport().GetCamera2D();
         SetActive(false);
+        
+        if (enableDebugLogs) 
+            GD.Print("[HexControls] UI interface initialized");
     }
     #endregion
 
-    #region Core Control
+    #region Public API
     public void SetActive(bool active)
     {
         isActive = active;
         if (enableDebugLogs) GD.Print($"[HexControls] SetActive: {active}");
         
-        if (!active && cursorLayer != null)
+        if (!active && !interactionModeActive)
         {
-            // Don't clear on deactivate - let other systems handle cleanup
-            if (!interactionModeActive)
-            {
-                cursorLayer.Clear();
-            }
+            hexGrid?.ClearLayer(CellLayer.Cursor);
         }
     }
 
     public void EnterInteractionMode()
     {
+        if (hexGrid == null) return;
+        
         if (enableDebugLogs) GD.Print("[HexControls] EnterInteractionMode");
         
         interactionModeActive = true;
@@ -85,7 +85,6 @@ public partial class HexControls : Node2D
         
         cursorPosition = FindPlayerPosition();
         CalculateAdjacentCells();
-        
         DrawCursor();
         
         if (enableDebugLogs) GD.Print($"[HexControls] Interaction mode active - cursor at {cursorPosition}");
@@ -93,14 +92,15 @@ public partial class HexControls : Node2D
 
     public void ExitInteractionMode(Vector2I focusPosition)
     {
+        if (hexGrid == null) return;
+        
         if (enableDebugLogs) GD.Print("[HexControls] ExitInteractionMode");
         
         interactionModeActive = false;
         validCells.Clear();
         adjacentCells.Clear();
         
-        if (cursorLayer != null)
-            cursorLayer.Clear();
+        hexGrid.ClearAllHighlights();
         
         cursorPosition = focusPosition;
         SetActive(false);
@@ -114,9 +114,7 @@ public partial class HexControls : Node2D
         SetCameraFollow(false);
         FocusOnPosition(focusPosition);
     }
-    #endregion
 
-    #region Data Management
     public void SetValidCells(HashSet<Vector2I> cells)
     {
         validCells = cells;
@@ -135,43 +133,24 @@ public partial class HexControls : Node2D
         if (enableDebugLogs) GD.Print($"[HexControls] Targeting: {type}, CanTargetSelf: {canTargetSelf}");
     }
 
-    private void CalculateAdjacentCells()
+    public void FocusOnPosition(Vector2I position)
     {
-        adjacentCells.Clear();
-        
-        if (hexGrid == null || validCells.Count == 0) return;
-        
-        foreach (var valid in validCells)
-        {
-            var neighbors = hexGrid.GetAllNeighborsOf(valid);
-            foreach (var n in neighbors)
-            {
-                if (!validCells.Contains(n) && hexGrid.IsValidCell(n))
-                    adjacentCells.Add(n);
-            }
-        }
-        
-        if (canTargetSelf)
-        {
-            var playerPos = FindPlayerPosition();
-            var neighbors = hexGrid.GetAllNeighborsOf(playerPos);
-            foreach (var n in neighbors)
-            {
-                if (!validCells.Contains(n) && hexGrid.IsValidCell(n))
-                    adjacentCells.Add(n);
-            }
-        }
-        
-        if (enableDebugLogs) GD.Print($"[HexControls] Adjacent cells: {adjacentCells.Count}");
+        cursorPosition = position;
+        UpdateCamera();
+    }
+
+    public void SetCameraFollow(bool enabled)
+    {
+        cameraFollowsEnabled = enabled;
     }
     #endregion
 
-    #region Input
+    #region Input Handling
     public override void _Input(InputEvent @event)
     {
-        if (!isActive || !interactionModeActive) return;
+        if (!isActive || !interactionModeActive || hexGrid == null) return;
         
-        // Skip if menu is handling
+        // Skip if menu is handling input
         var inputManager = GetViewport().GetChildren().OfType<CentralInputManager>().FirstOrDefault();
         if (inputManager?.CurrentContext == CentralInputManager.InputContext.Menu) return;
         
@@ -201,10 +180,10 @@ public partial class HexControls : Node2D
         {
             if (!IsMouseOverUI(mouse.GlobalPosition))
             {
-                var clicked = WorldToHex(mouse.GlobalPosition);
+                var clicked = hexGrid.WorldToCell(GetGlobalMousePosition());
                 var playerPos = FindPlayerPosition();
                 
-                if (validCells.Contains(clicked) || (canTargetSelf && clicked == playerPos))
+                if (IsValidTarget(clicked))
                 {
                     cursorPosition = clicked;
                     DrawCursor();
@@ -223,15 +202,17 @@ public partial class HexControls : Node2D
 
     private void MoveCursor(Vector2I dir)
     {
+        if (hexGrid == null) return;
+        
         justEntered = false;
         var newPos = cursorPosition + dir;
         
-        if (!IsAdjacent(cursorPosition, newPos)) return;
+        // Use HexGrid for adjacency check
+        var neighbors = hexGrid.GetHexNeighbors(cursorPosition);
+        if (!neighbors.Contains(newPos)) return;
         
         var playerPos = FindPlayerPosition();
-        bool canMove = validCells.Contains(newPos) || 
-                      (canTargetSelf && newPos == playerPos) || 
-                      adjacentCells.Contains(newPos);
+        bool canMove = IsValidTarget(newPos) || adjacentCells.Contains(newPos);
         
         if (canMove)
         {
@@ -244,15 +225,13 @@ public partial class HexControls : Node2D
 
     private void ConfirmSelection()
     {
-        var playerPos = FindPlayerPosition();
-        bool isValid = validCells.Contains(cursorPosition) || 
-                      (canTargetSelf && cursorPosition == playerPos);
-        
-        if (!isValid)
+        if (!IsValidTarget(cursorPosition))
         {
             if (enableDebugLogs) GD.Print($"[HexControls] Invalid selection at {cursorPosition}");
             return;
         }
+        
+        var playerPos = FindPlayerPosition();
         
         // Special case: cancel if moving to same position
         if (cursorPosition == playerPos && targetType.ToLower() == "movement")
@@ -268,18 +247,16 @@ public partial class HexControls : Node2D
         
         justEntered = false;
         if (enableDebugLogs) GD.Print($"[HexControls] Confirmed: {cursorPosition}");
-        hexGrid?.SelectCell(cursorPosition);
+        
+        // Emit signal instead of calling hexGrid directly
+        EmitSignal(SignalName.CellActivated, cursorPosition);
     }
 
     private void CancelInteraction()
     {
         if (enableDebugLogs) GD.Print("[HexControls] Cancelled");
         
-        if (hexGrid != null)
-        {
-            hexGrid.GetLayer(CellLayer.Marker)?.Clear();
-            hexGrid.GetLayer(CellLayer.Cursor)?.Clear();
-        }
+        hexGrid?.ClearAllHighlights();
         
         cursorPosition = FindPlayerPosition();
         DrawCursor();
@@ -288,77 +265,103 @@ public partial class HexControls : Node2D
     }
     #endregion
 
-    #region Drawing
+    #region Cursor Management
     private void DrawCursor()
     {
-        if (cursorLayer == null) return;
+        if (hexGrid == null) return;
         
-        // Clear entire cursor layer first to avoid leftover cursors
-        cursorLayer.Clear();
+        // Clear cursor layer
+        hexGrid.ClearLayer(CellLayer.Cursor);
         
-        // Determine cursor color
-        var playerPos = FindPlayerPosition();
-        bool isValid = validCells.Contains(cursorPosition) || 
-                      (canTargetSelf && cursorPosition == playerPos);
+        // Determine if current position is valid
+        bool isValid = IsValidTarget(cursorPosition);
         
-        // Use the CORRECT atlas coords from HexGrid
-        var atlasCoords = isValid ? new Vector2I(2, 0) : new Vector2I(3, 0);  // GREEN: (2,0), RED: (3,0)
+        // If cursor is at invalid position (RED cursor)
+        if (!isValid)
+        {
+            // Clear AOE markers
+            hexGrid.ClearAoePreview();
+            
+            // Reset valid range markers - redraw them to restore blue highlights
+            if (validCells.Count > 0)
+            {
+                var validCellsList = validCells.ToList();
+                hexGrid.ShowRangeHighlight(validCellsList);
+            }
+            
+            if (enableDebugLogs) GD.Print($"[HexControls] Invalid position - cleared AOE and reset range markers");
+        }
         
-        // SetCell requires: position, source_id, atlas_coords
-        cursorLayer.SetCell(cursorPosition, 0, atlasCoords);
+        // Draw cursor with appropriate color
+        var cursorType = isValid ? CursorType.Valid : CursorType.Invalid;
+        hexGrid.SetCursor(cursorPosition, cursorType, CellLayer.Cursor);
         
         if (enableDebugLogs) 
-            GD.Print($"[HexControls] Drew {(isValid ? "GREEN" : "RED")} cursor at {cursorPosition} with atlas {atlasCoords}");
+            GD.Print($"[HexControls] Drew {cursorType} cursor at {cursorPosition}");
+        
+        // Emit cursor moved signal
+        EmitSignal(SignalName.CursorMoved, cursorPosition);
     }
 
     private void ShowAoeIfNeeded()
     {
-        if (hexGrid != null && aoePattern.Count > 0)
+        if (hexGrid == null || aoePattern.Count == 0) return;
+        
+        if (IsValidTarget(cursorPosition))
         {
-            var playerPos = FindPlayerPosition();
-            bool isValid = validCells.Contains(cursorPosition) || 
-                          (canTargetSelf && cursorPosition == playerPos);
-            
-            if (isValid)
-            {
-                hexGrid.ClearAoePreview();
-                hexGrid.ShowAoePreview(cursorPosition, aoePattern);
-                // Redraw cursor on top of AOE
-                CallDeferred(nameof(DrawCursor));
-            }
+            hexGrid.ShowAoePreview(cursorPosition, aoePattern);
+            // Redraw cursor on top of AOE
+            CallDeferred(nameof(RedrawCursorOnly));
         }
+    }
+    
+    private void RedrawCursorOnly()
+    {
+        if (hexGrid == null) return;
+        
+        // Only redraw the cursor without clearing AOE
+        var cursorType = IsValidTarget(cursorPosition) ? CursorType.Valid : CursorType.Invalid;
+        hexGrid.SetCursor(cursorPosition, cursorType, CellLayer.Cursor);
     }
     #endregion
 
-    #region Helpers
-    public void FocusOnPosition(Vector2I position)
+    #region Helper Methods
+    private bool IsValidTarget(Vector2I position)
     {
-        cursorPosition = position;
-        UpdateCamera();
+        var playerPos = FindPlayerPosition();
+        return validCells.Contains(position) || (canTargetSelf && position == playerPos);
     }
 
-    public void SetCameraFollow(bool enabled)
+    private void CalculateAdjacentCells()
     {
-        cameraFollowsEnabled = enabled;
-    }
-
-    private void UpdateCamera()
-    {
-        if (!cameraFollowsEnabled || camera == null) return;
+        if (hexGrid == null) return;
         
-        var worldPos = HexToWorld(cursorPosition);
-        var targetPos = ToGlobal(worldPos);
+        adjacentCells.Clear();
         
-        if (instantCameraMove)
+        if (validCells.Count == 0) return;
+        
+        foreach (var valid in validCells)
         {
-            camera.GlobalPosition = targetPos;
+            var neighbors = hexGrid.GetHexNeighbors(valid);
+            foreach (var n in neighbors)
+            {
+                if (!validCells.Contains(n) && hexGrid.IsValidCell(n))
+                    adjacentCells.Add(n);
+            }
         }
-        else
+        
+        if (canTargetSelf)
         {
-            cameraTween?.Kill();
-            cameraTween = CreateTween();
-            cameraTween.TweenProperty(camera, "global_position", targetPos, 1f / cameraSpeed);
+            var playerPos = FindPlayerPosition();
+            var neighbors = hexGrid.GetHexNeighbors(playerPos);
+            foreach (var n in neighbors)
+            {
+                if (!validCells.Contains(n) && hexGrid.IsValidCell(n))
+                    adjacentCells.Add(n);
+            }
         }
+        
+        if (enableDebugLogs) GD.Print($"[HexControls] Adjacent cells: {adjacentCells.Count}");
     }
 
     private Vector2I FindPlayerPosition()
@@ -368,7 +371,7 @@ public partial class HexControls : Node2D
         var entityLayer = hexGrid.GetLayer(CellLayer.Entity);
         if (entityLayer == null) return Vector2I.Zero;
     
-        // Expand search range or make it dynamic
+        // Search for player entity (atlas coords 0,0)
         for (int x = -20; x <= 20; x++)
         {
             for (int y = -20; y <= 20; y++)
@@ -383,19 +386,24 @@ public partial class HexControls : Node2D
         }
         return Vector2I.Zero;
     }
-    private bool IsAdjacent(Vector2I from, Vector2I to)
+
+    private void UpdateCamera()
     {
-        var dirs = (from.X % 2 == 0) ? 
-            new[] { new Vector2I(0,-1), new Vector2I(1,-1), new Vector2I(1,0), 
-                   new Vector2I(0,1), new Vector2I(-1,0), new Vector2I(-1,-1) } :
-            new[] { new Vector2I(0,-1), new Vector2I(1,0), new Vector2I(1,1), 
-                   new Vector2I(0,1), new Vector2I(-1,1), new Vector2I(-1,0) };
+        if (!cameraFollowsEnabled || camera == null || hexGrid == null) return;
         
-        foreach (var d in dirs)
+        var worldPos = hexGrid.CellToWorld(cursorPosition);
+        var targetPos = ToGlobal(worldPos);
+        
+        if (instantCameraMove)
         {
-            if (from + d == to) return true;
+            camera.GlobalPosition = targetPos;
         }
-        return false;
+        else
+        {
+            cameraTween?.Kill();
+            cameraTween = CreateTween();
+            cameraTween.TweenProperty(camera, "global_position", targetPos, 1f / cameraSpeed);
+        }
     }
 
     private bool IsMouseOverUI(Vector2 pos)
@@ -403,22 +411,6 @@ public partial class HexControls : Node2D
         return GetViewport().GuiGetHoveredControl() != null;
     }
 
-    public Vector2I WorldToHex(Vector2 globalPos)
-    {
-        if (cursorLayer == null || camera == null) return Vector2I.Zero;
-        var viewport = GetViewport();
-        var viewportSize = viewport.GetVisibleRect().Size;
-        var worldPos = camera.GlobalPosition + (globalPos - viewportSize * 0.5f);
-        var localPos = cursorLayer.ToLocal(worldPos);
-        return cursorLayer.LocalToMap(localPos);
-    }
-
-    private Vector2 HexToWorld(Vector2I hex)
-    {
-        if (cursorLayer == null) return Vector2.Zero;
-        return cursorLayer.MapToLocal(hex);
-    }
-
-    public Vector2 GetCursorWorldPosition() => HexToWorld(cursorPosition);
+    public Vector2 GetCursorWorldPosition() => hexGrid?.CellToWorld(cursorPosition) ?? Vector2.Zero;
     #endregion
 }

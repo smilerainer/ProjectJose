@@ -164,7 +164,7 @@ public class BattleConfigurationLoader
     {
         if (!configLoaded || battleConfig?.Skills == null)
         {
-            GD.PrintWarn("[BattleConfig] Cannot get skill names - configuration not loaded properly");
+            GD.Print("[BattleConfig] Cannot get skill names - configuration not loaded properly");
             return new string[0];
         }
         
@@ -175,7 +175,7 @@ public class BattleConfigurationLoader
     {
         if (!configLoaded || battleConfig?.Items == null)
         {
-            GD.PrintWarn("[BattleConfig] Cannot get item names - configuration not loaded properly");
+            GD.Print("[BattleConfig] Cannot get item names - configuration not loaded properly");
             return new string[0];
         }
         
@@ -186,7 +186,7 @@ public class BattleConfigurationLoader
     {
         if (!configLoaded || battleConfig?.TalkOptions == null)
         {
-            GD.PrintWarn("[BattleConfig] Cannot get talk option names - configuration not loaded properly");
+            GD.Print("[BattleConfig] Cannot get talk option names - configuration not loaded properly");
             return new string[0];
         }
         
@@ -197,7 +197,7 @@ public class BattleConfigurationLoader
     {
         if (!configLoaded || battleConfig?.MoveOptions == null)
         {
-            GD.PrintWarn("[BattleConfig] Cannot get move option names - configuration not loaded properly");
+            GD.Print("[BattleConfig] Cannot get move option names - configuration not loaded properly");
             return new string[0];
         }
         

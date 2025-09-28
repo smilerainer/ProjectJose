@@ -2,6 +2,7 @@
 using Godot;
 using System.Collections.Generic;
 using CustomJsonSystem;
+using System.Linq;
 
 public partial class BattleManager : Node
 {
@@ -12,6 +13,21 @@ public partial class BattleManager : Node
     private BattleActionHandler actionHandler;
     private BattleConfigurationLoader configLoader;
     private TurnManager turnManager;
+    
+    #endregion
+    
+    #region Helper Methods for UI Controller
+    
+    // Called by BattleUIController via CallDeferred
+    public void CallEnsureMenuFocus()
+    {
+        uiController?.CallEnsureMenuFocus();
+    }
+    
+    public void CallConnectToDynamicMenu()
+    {
+        uiController?.CallConnectToDynamicMenu();
+    }
     
     #endregion
     

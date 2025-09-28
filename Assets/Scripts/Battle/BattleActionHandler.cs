@@ -39,7 +39,10 @@ public class BattleActionHandler
     public void ProcessActionRequest(string actionType, string actionName)
     {
         currentActionType = actionType;
-        ClearCurrentAction();
+        // Don't clear the action here - we need to keep the action type
+        selectedActionOption = "";
+        currentActionConfig = null;
+        currentValidTargets.Clear();
         
         GD.Print($"[BattleAction] Action request: {actionType}");
     }
@@ -53,6 +56,7 @@ public class BattleActionHandler
         {
             currentValidTargets = CalculateValidTargets(currentActionConfig);
             GD.Print($"[BattleAction] Action selected: {actionName}, {currentValidTargets.Count} valid targets");
+            GD.Print($"[BattleAction] Current action type: '{currentActionType}'");
         }
         else
         {
@@ -96,6 +100,13 @@ public class BattleActionHandler
     {
         GD.Print($"[BattleAction] Executing {currentActionType}: {actionConfig.Name} on {targetCell}");
         
+        // Debug: Check if currentActionType is empty
+        if (string.IsNullOrEmpty(currentActionType))
+        {
+            GD.PrintErr("[BattleAction] ERROR: currentActionType is empty! Cannot determine action type.");
+            return;
+        }
+        
         switch (currentActionType)
         {
             case "move":
@@ -111,7 +122,7 @@ public class BattleActionHandler
                 ExecuteTalkAction(targetCell, actionConfig);
                 break;
             default:
-                GD.PrintErr($"[BattleAction] Unknown action type: {currentActionType}");
+                GD.PrintErr($"[BattleAction] Unknown action type: '{currentActionType}'");
                 break;
         }
     }
@@ -124,6 +135,7 @@ public class BattleActionHandler
             return;
         }
         
+        GD.Print($"[BattleAction] Moving player to {targetCell}");
         stateManager.MovePlayer(targetCell);
         GD.Print($"[BattleAction] Move '{actionConfig.Name}' executed successfully");
         
@@ -159,11 +171,11 @@ public class BattleActionHandler
                 stateManager.ApplyStatusEffectToEntity(cell, actionConfig.StatusEffect);
             }
             
-            // Remove status effects
-            if (!string.IsNullOrEmpty(actionConfig.RemovesStatus))
-            {
-                stateManager.RemoveStatusEffectFromEntity(cell, actionConfig.RemovesStatus);
-            }
+            // Remove status effects (if property exists in your ActionConfig)
+            // if (!string.IsNullOrEmpty(actionConfig.RemovesStatus))
+            // {
+            //     stateManager.RemoveStatusEffectFromEntity(cell, actionConfig.RemovesStatus);
+            // }
         }
         
         // Apply skill costs
@@ -204,11 +216,11 @@ public class BattleActionHandler
                 stateManager.ApplyStatusEffectToEntity(cell, actionConfig.StatusEffect);
             }
             
-            // Remove status effects
-            if (!string.IsNullOrEmpty(actionConfig.RemovesStatus))
-            {
-                stateManager.RemoveStatusEffectFromEntity(cell, actionConfig.RemovesStatus);
-            }
+            // Remove status effects (if property exists in your ActionConfig)
+            // if (!string.IsNullOrEmpty(actionConfig.RemovesStatus))
+            // {
+            //     stateManager.RemoveStatusEffectFromEntity(cell, actionConfig.RemovesStatus);
+            // }
         }
         
         // Handle item consumption
@@ -260,12 +272,12 @@ public class BattleActionHandler
                 // TODO: Integrate with BattleLogic Entity reputation system
             }
             
-            // Award money from successful negotiations
-            if (actionConfig.MoneyReward != 0)
-            {
-                GD.Print($"[BattleAction] Money reward: {(actionConfig.MoneyReward > 0 ? "+" : "")}{actionConfig.MoneyReward}");
-                // TODO: Integrate with BattleLogic money system
-            }
+            // Award money from successful negotiations (if property exists in your ActionConfig)
+            // if (actionConfig.MoneyReward != 0)
+            // {
+            //     GD.Print($"[BattleAction] Money reward: {(actionConfig.MoneyReward > 0 ? "+" : "")}{actionConfig.MoneyReward}");
+            //     // TODO: Integrate with BattleLogic money system
+            // }
         }
         
         // Apply talk action costs

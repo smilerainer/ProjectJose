@@ -45,10 +45,11 @@ public class BattleUIController
     {
         if (menuControls != null)
             menuControls.ButtonActivated += OnMainMenuButtonPressed;
-        if (hexGrid != null)
-            hexGrid.CellSelected += OnCellSelected;
         if (hexControls != null)
+        {
+            hexControls.CellActivated += OnCellSelected;
             hexControls.InteractionCancelled += OnInteractionCancelled;
+        }
         if (inputManager != null)
             inputManager.DynamicMenuSelection += OnDynamicMenuSelection;
             
@@ -75,9 +76,8 @@ public class BattleUIController
             menuControls.SetActive(true);
             menuControls.ResetToFirstButton();
             
-            // Ensure focus is set properly
-            battleManager.GetTree().CreateTimer(0.05f).Connect("timeout", 
-                new Callable(this, nameof(EnsureMenuFocus)), (uint)ConnectFlags.OneShot);
+            // Ensure focus is set properly with delay
+            EnsureMenuFocusDelayed();
         }
         
         GD.Print("[BattleUI] Main menu shown");
@@ -102,9 +102,8 @@ public class BattleUIController
         {
             inputManager.SetMenuButtonArray(options);
             
-            // Connect to dynamic menu after a small delay
-            battleManager.GetTree().CreateTimer(0.1f).Connect("timeout", 
-                new Callable(this, nameof(ConnectToDynamicMenu)), (uint)ConnectFlags.OneShot);
+            // Connect to dynamic menu with delay
+            ConnectToDynamicMenuDelayed();
         }
         
         GD.Print($"[BattleUI] Submenu shown with {options.Length} options");
@@ -191,22 +190,23 @@ public class BattleUIController
         var dynamicMenu = GetDynamicMenuFromInputManager();
         if (dynamicMenu != null)
         {
-            // Disconnect if already connected
-            if (dynamicMenu.IsConnected(MenuControls.SignalName.ButtonActivated, 
-                new Callable(this, nameof(OnDynamicMenuButtonPressed))))
+            // Simple disconnection and reconnection
+            try
             {
                 dynamicMenu.ButtonActivated -= OnDynamicMenuButtonPressed;
+                dynamicMenu.ButtonActivated += OnDynamicMenuButtonPressed;
+                GD.Print("[BattleUI] Connected to dynamic menu successfully");
             }
-            
-            // Connect to the dynamic menu
-            dynamicMenu.ButtonActivated += OnDynamicMenuButtonPressed;
-            GD.Print("[BattleUI] Connected to dynamic menu successfully");
+            catch (System.Exception e)
+            {
+                GD.PrintErr($"[BattleUI] Error connecting to dynamic menu: {e.Message}");
+                ConnectToDynamicMenuDelayed();
+            }
         }
         else
         {
             GD.PrintErr("[BattleUI] Failed to find dynamic menu - retrying...");
-            battleManager.GetTree().CreateTimer(0.1f).Connect("timeout", 
-                new Callable(this, nameof(ConnectToDynamicMenu)), (uint)ConnectFlags.OneShot);
+            ConnectToDynamicMenuDelayed();
         }
     }
     
@@ -215,11 +215,15 @@ public class BattleUIController
         var dynamicMenu = GetDynamicMenuFromInputManager();
         if (dynamicMenu != null)
         {
-            if (dynamicMenu.IsConnected(MenuControls.SignalName.ButtonActivated, 
-                new Callable(this, nameof(OnDynamicMenuButtonPressed))))
+            // Simple disconnection without Callable checks
+            try
             {
                 dynamicMenu.ButtonActivated -= OnDynamicMenuButtonPressed;
                 GD.Print("[BattleUI] Disconnected from dynamic menu");
+            }
+            catch (System.Exception e)
+            {
+                GD.PrintErr($"[BattleUI] Error disconnecting from dynamic menu: {e.Message}");
             }
         }
     }
@@ -312,7 +316,7 @@ public class BattleUIController
     {
         if (isInSubmenu)
         {
-            string buttonText = button.Text;
+            string buttonText = GetButtonText(button);
             GD.Print($"[BattleUI] Dynamic menu selection: {buttonText}");
             battleManager.OnSubmenuSelection(buttonText);
         }
@@ -340,6 +344,44 @@ public class BattleUIController
     {
         GD.Print("[BattleUI] Target selection cancelled");
         battleManager.OnActionCancelled();
+    }
+    
+    #endregion
+    
+    #region Helper Methods - Timer Workarounds
+    
+    private void EnsureMenuFocusDelayed()
+    {
+        // Use a simple call deferred instead of timer
+        battleManager.CallDeferred(nameof(CallEnsureMenuFocus));
+    }
+    
+    private void ConnectToDynamicMenuDelayed()
+    {
+        // Use a simple call deferred instead of timer
+        battleManager.CallDeferred(nameof(CallConnectToDynamicMenu));
+    }
+    
+    // These methods will be called by the BattleManager
+    public void CallEnsureMenuFocus()
+    {
+        EnsureMenuFocus();
+    }
+    
+    public void CallConnectToDynamicMenu()
+    {
+        ConnectToDynamicMenu();
+    }
+    
+    private string GetButtonText(BaseButton button)
+    {
+        // Try to get text from different button types
+        if (button is Button btn)
+            return btn.Text;
+        
+        // Label is not a BaseButton, so this check won't work
+        // Just use the button name as fallback
+        return button.Name;
     }
     
     #endregion
