@@ -43,7 +43,6 @@ tile_set = ExtResource("2_3p22m")
 script = ExtResource("1_2o6ge")
 camera = NodePath("../Camera2D")
 cameraSpeed = 4.0
-enableDebugWASD = true
 
 [node name="Camera2D" type="Camera2D" parent="."]
 

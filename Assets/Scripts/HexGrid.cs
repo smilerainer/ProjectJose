@@ -1,4 +1,4 @@
-// HexGrid.cs - Enhanced core hex grid with yellow AOE cursors
+// HexGrid.cs - Standalone hex grid with cursor sprite definitions
 using Godot;
 using System.Collections.Generic;
 
@@ -11,6 +11,19 @@ public enum CellLayer
     Marker = 40,
     Cursor = 50
 }
+
+    public static class CursorSprites
+    {
+        // Updated to match your actual tileset layout
+        public static readonly Vector2I GREEN = new Vector2I(2, 0);     // Valid target cursor
+        public static readonly Vector2I RED = new Vector2I(3, 0);       // Invalid/adjacent cursor  
+        public static readonly Vector2I YELLOW = new Vector2I(1, 0);    // Use blue for AOE preview (since no yellow)
+        public static readonly Vector2I BLUE = new Vector2I(1, 0);      // Range highlight cursor
+        
+        // Alternative tile IDs for layer priority
+        public const int ALT_NORMAL = 0;
+        public const int ALT_PRIORITY = 1;
+    }
 
 public partial class HexGrid : Node2D
 {
@@ -38,7 +51,7 @@ public partial class HexGrid : Node2D
     private Vector2I hoveredCell = new(-999, -999);
     private HashSet<Vector2I> occupiedCells = new();
     private Dictionary<Vector2I, string> cellMetadata = new();
-    private HashSet<Vector2I> currentAoeCells = new(); // Track current AOE cells
+    private HashSet<Vector2I> currentAoeCells = new();
     
     [Export] private bool enableMouseDebug = false;
     [Export] private bool enableHoverTracking = true;
@@ -58,6 +71,12 @@ public partial class HexGrid : Node2D
     public override void _Ready()
     {
         InitializeLayers();
+        
+        GD.Print("[HexGrid] Cursor sprites configured:");
+        GD.Print($"  GREEN (valid): {CursorSprites.GREEN}");
+        GD.Print($"  RED (invalid): {CursorSprites.RED}");
+        GD.Print($"  YELLOW (AOE): {CursorSprites.YELLOW}");
+        GD.Print($"  BLUE (range): {CursorSprites.BLUE}");
     }
     
     private void InitializeLayers()
@@ -114,21 +133,11 @@ public partial class HexGrid : Node2D
         cursorLayer?.Clear();
     }
     
-    public void HighlightCells(List<Vector2I> cells, int tileId)
-    {
-        cursorLayer?.Clear();
-        foreach (var cell in cells)
-        {
-            if (IsValidCell(cell))
-                cursorLayer?.SetCell(cell, 0, Vector2I.Zero, tileId);
-        }
-    }
-    
     private void UpdateCursorVisual()
     {
         cursorLayer?.Clear();
         if (HasSelection)
-            cursorLayer?.SetCell(selectedCell, 0, Vector2I.Zero, 0);
+            cursorLayer?.SetCell(selectedCell, 0, CursorSprites.GREEN, CursorSprites.ALT_NORMAL);
     }
     
     #endregion
@@ -162,7 +171,6 @@ public partial class HexGrid : Node2D
     
     public void SetCellMetadata(Vector2I cell, string key, string value)
     {
-        var metaKey = $"{cell.X},{cell.Y}:{key}";
         cellMetadata[cell] = value;
     }
     
@@ -203,7 +211,7 @@ public partial class HexGrid : Node2D
     
     #endregion
     
-    #region Pathfinding and Navigation
+    #region Navigation
     
     public List<Vector2I> GetNeighborsOf(Vector2I cell)
     {
@@ -271,27 +279,15 @@ public partial class HexGrid : Node2D
     
     private Vector2I[] GetDirectionsFor(Vector2I cell)
     {
-        // Fixed for VERTICAL offset hex coordinates
         Vector2I[] evenColDirections = { 
-            new(0, -1),  // N
-            new(1, -1),  // NE
-            new(1, 0),   // SE  
-            new(0, 1),   // S
-            new(-1, 0),  // SW
-            new(-1, -1)  // NW
+            new(0, -1), new(1, -1), new(1, 0), new(0, 1), new(-1, 0), new(-1, -1)
         };
         
         Vector2I[] oddColDirections = { 
-            new(0, -1),  // N
-            new(1, 0),   // NE
-            new(1, 1),   // SE
-            new(0, 1),   // S
-            new(-1, 1),  // SW
-            new(-1, 0)   // NW
+            new(0, -1), new(1, 0), new(1, 1), new(0, 1), new(-1, 1), new(-1, 0)
         };
 
-        bool isEvenCol = cell.X % 2 == 0;
-        return isEvenCol ? evenColDirections : oddColDirections;
+        return cell.X % 2 == 0 ? evenColDirections : oddColDirections;
     }
 
     private Vector3I OffsetToCube(Vector2I offset)
@@ -308,14 +304,13 @@ public partial class HexGrid : Node2D
     
     public void ShowRangeHighlight(List<Vector2I> rangeCells)
     {
-        var markerLayer = GetLayer(CellLayer.Marker);
         markerLayer?.Clear();
         
         foreach (var cell in rangeCells)
         {
             if (IsValidCell(cell))
             {
-                SetTileWithCoords(cell, CellLayer.Marker, new Vector2I(1, 0)); // Blue range marker
+                SetTileWithCoords(cell, CellLayer.Marker, new Vector2I(1, 0));
                 GD.Print($"[HexGrid] Range highlight at {cell}");
             }
         }
@@ -325,10 +320,7 @@ public partial class HexGrid : Node2D
     {
         GD.Print($"[HexGrid] ShowAoePreview called - Target: {targetCell}, AOE cells: {aoePattern.Count}");
         
-        // Clear existing AOE previews (only yellow cursors)
         ClearAoePreview();
-        
-        // Track new AOE cells
         currentAoeCells.Clear();
         
         foreach (var offset in aoePattern)
@@ -336,9 +328,7 @@ public partial class HexGrid : Node2D
             var aoeCell = targetCell + offset;
             if (IsValidCell(aoeCell))
             {
-                // Use YELLOW cursor (atlas coords 0,0) for AOE preview
-                // Note: Green cursors will be drawn after this to override when needed
-                cursorLayer?.SetCell(aoeCell, 0, new Vector2I(0, 0), 0);
+                cursorLayer?.SetCell(aoeCell, 0, CursorSprites.YELLOW, CursorSprites.ALT_NORMAL);
                 currentAoeCells.Add(aoeCell);
                 GD.Print($"[HexGrid] AOE preview (YELLOW) at {aoeCell} (offset {offset})");
             }
@@ -353,42 +343,25 @@ public partial class HexGrid : Node2D
     
     public void ClearRangeHighlight()
     {
-        var markerLayer = GetLayer(CellLayer.Marker);
         markerLayer?.Clear();
         GD.Print("[HexGrid] Cleared range highlight");
     }
     
     public void ClearAoePreview()
     {
-        if (cursorLayer == null) 
-        {
-            GD.Print("[HexGrid] ClearAoePreview - cursorLayer is null");
-            return;
-        }
+        if (cursorLayer == null) return;
         
-        // Only clear AOE cells (yellow cursors), leave other cursor types
+        // Only clear yellow cursors, leave green/red alone
         foreach (var aoeCell in currentAoeCells)
         {
-            cursorLayer.EraseCell(aoeCell);
-            GD.Print($"[HexGrid] Cleared AOE preview at {aoeCell}");
+            var currentTile = cursorLayer.GetCellAtlasCoords(aoeCell);
+            if (currentTile == CursorSprites.YELLOW) // Only clear yellow
+            {
+                cursorLayer.EraseCell(aoeCell);
+            }
         }
         
         currentAoeCells.Clear();
-        GD.Print("[HexGrid] Cleared AOE preview - all yellow cursors removed");
-    }
-    
-    public List<Vector2I> TransformPattern(List<Vector2I> pattern, Vector2I origin)
-    {
-        var transformedCells = new List<Vector2I>();
-        
-        foreach (var offset in pattern)
-        {
-            var transformedCell = origin + offset;
-            transformedCells.Add(transformedCell);
-            GD.Print($"[HexGrid] Transformed pattern cell: {offset} + {origin} = {transformedCell}");
-        }
-        
-        return transformedCells;
     }
     
     public bool CanTargetSelf(string targetType)
@@ -403,6 +376,4 @@ public partial class HexGrid : Node2D
     }
     
     #endregion
-    
-
 }
