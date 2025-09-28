@@ -132,6 +132,37 @@
       "aoePattern": [
         {"x": 0, "y": 0}
       ]
+    },
+    {
+      "id": "earth_spike_trap",
+      "name": "Earth Spike Trap",
+      "description": "Creates spikes on empty ground that damage enemies who step on them",
+      "damage": 15,
+      "cost": 6,
+      "range": 3,
+      "targetType": "Area",
+      "speed": 1.0,
+      "statusEffect": "Trapped",
+      "statusDuration": 3,
+      "inverseTargeting": true,
+      "debugMode": true,
+      "rangePattern": [
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1},
+        {"x": 2, "y": 0},
+        {"x": -2, "y": 0},
+        {"x": 0, "y": 2},
+        {"x": 0, "y": -2},
+        {"x": 1, "y": 1},
+        {"x": -1, "y": 1}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0}
+      ]
     }
   ],
   "items": [
@@ -223,6 +254,35 @@
         {"x": -1, "y": 0},
         {"x": 0, "y": 1},
         {"x": 0, "y": -1}
+      ]
+    },
+    {
+      "id": "caltrops",
+      "name": "Caltrops",
+      "description": "Scatter spikes on empty ground to slow enemies",
+      "damage": 5,
+      "statusEffect": "Slow",
+      "statusDuration": 2,
+      "usesRemaining": 3,
+      "range": 2,
+      "targetType": "Area",
+      "speed": 1.2,
+      "inverseTargeting": true,
+      "debugMode": true,
+      "rangePattern": [
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0},
+        {"x": 0, "y": 1},
+        {"x": 0, "y": -1},
+        {"x": 1, "y": -1},
+        {"x": -1, "y": -1},
+        {"x": 2, "y": 0},
+        {"x": -2, "y": 0}
+      ],
+      "aoePattern": [
+        {"x": 0, "y": 0},
+        {"x": 1, "y": 0},
+        {"x": -1, "y": 0}
       ]
     }
   ],
@@ -403,7 +463,8 @@
       "showRangeIndicators": true,
       "showAoeIndicators": true,
       "enableAdvancedCombat": true,
-      "useHexGrid": true
+      "useHexGrid": true,
+      "enableInverseTargeting": true
     }
   }
 }

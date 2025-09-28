@@ -629,6 +629,10 @@ public partial class BattleManager : Node
                 bool canMoveTo = hexGrid != null && !hexGrid.IsOccupiedCell(cell);
                 GD.Print($"[Battle] Movement target check: {canMoveTo} (occupied: {hexGrid?.IsOccupiedCell(cell)})");
                 return canMoveTo;
+            case "inversetargeting":
+                bool isEmpty = hexGrid != null && !hexGrid.IsOccupiedCell(cell);
+                GD.Print($"[Battle] Cell {cell} is empty: {isEmpty}");
+                return isEmpty;
                 
             case "area":
             case "any":
