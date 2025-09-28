@@ -1,24 +1,10 @@
-// SimplifiedBattleLogic.cs - Turn-based strategy battle system
-// Core mechanics: HP, shared Money pool as action points, Status Effects
+// BattleLogic.cs - Turn-based strategy battle system
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SimplifiedBattleSystem
+namespace BattleLogic
 {
-    #region Core Game Description
-    /* 
-     * GAME DESIGN:
-     * - Turn-based strategy on hex grid
-     * - Entities have HP and Status Effects only
-     * - Money is a shared global pool used as "action points" for all actions
-     * - Actions cost money to perform (including movement, skills, items, talking)
-     * - Money is earned through combat victories, negotiations, and completing objectives
-     * - Status effects provide tactical depth (poison, buffs, debuffs, etc.)
-     * - Social mechanics through friendship/reputation affect action costs and success rates
-     * - Victory conditions: defeat all enemies or achieve scenario objectives
-     */
-    #endregion
     
     #region Core Types
     

@@ -86,7 +86,6 @@ public partial class HexControls : Node2D
         cursorPosition = FindPlayerPosition();
         CalculateAdjacentCells();
         
-        // Draw cursor immediately
         DrawCursor();
         
         if (enableDebugLogs) GD.Print($"[HexControls] Interaction mode active - cursor at {cursorPosition}");
@@ -365,13 +364,14 @@ public partial class HexControls : Node2D
     private Vector2I FindPlayerPosition()
     {
         if (hexGrid == null) return Vector2I.Zero;
-        
+    
         var entityLayer = hexGrid.GetLayer(CellLayer.Entity);
         if (entityLayer == null) return Vector2I.Zero;
-        
-        for (int x = -10; x <= 10; x++)
+    
+        // Expand search range or make it dynamic
+        for (int x = -20; x <= 20; x++)
         {
-            for (int y = -10; y <= 10; y++)
+            for (int y = -20; y <= 20; y++)
             {
                 var cell = new Vector2I(x, y);
                 if (entityLayer.GetCellTileData(cell) != null &&
@@ -383,7 +383,6 @@ public partial class HexControls : Node2D
         }
         return Vector2I.Zero;
     }
-
     private bool IsAdjacent(Vector2I from, Vector2I to)
     {
         var dirs = (from.X % 2 == 0) ? 

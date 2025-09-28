@@ -555,14 +555,10 @@ public partial class BattleManager : Node
         var validTargets = new List<Vector2I>();
         var rangePattern = actionConfig.RangePattern.Select(p => p.ToVector2I()).ToList();
         
-        GD.Print($"[Battle] ═══ CALCULATING VALID TARGETS ═══");
-        GD.Print($"[Battle] Player position: {playerPosition}");
-        GD.Print($"[Battle] Raw range pattern: [{string.Join(", ", actionConfig.RangePattern.Select(p => $"({p.X},{p.Y})"))}]");
-        GD.Print($"[Battle] Converted range pattern: [{string.Join(", ", rangePattern)}]");
+        GD.Print($"Player position: {playerPosition}, Is odd column: {playerPosition.X % 2 != 0}");
         
         if (rangePattern.Count == 0)
         {
-            GD.Print("[Battle] ⚠ No range pattern defined, using default adjacent pattern");
             rangePattern = new List<Vector2I>
             {
                 new(1, 0), new(-1, 0), new(0, 1), new(0, -1), new(1, -1), new(-1, -1)
@@ -571,46 +567,40 @@ public partial class BattleManager : Node
         
         foreach (var offset in rangePattern)
         {
-            var targetCell = playerPosition + offset;
+            var adjustedOffset = offset;
             
-            GD.Print($"[Battle] Checking offset {offset} -> target cell {targetCell}");
+            if (playerPosition.X % 2 != 0 && offset.X != 0)
+            {
+                adjustedOffset = new Vector2I(offset.X, offset.Y + 1);
+                GD.Print($"ADJUSTED: {offset} -> {adjustedOffset}");
+            }
+            else
+            {
+                GD.Print($"NO CHANGE: {offset}");
+            }
+            
+            var targetCell = playerPosition + adjustedOffset;
+            GD.Print($"Target: {playerPosition} + {adjustedOffset} = {targetCell}");
             
             if (hexGrid != null && hexGrid.IsValidCell(targetCell))
             {
                 bool canTarget = CanTargetCell(targetCell, actionConfig.TargetType);
-                
                 if (canTarget)
                 {
                     validTargets.Add(targetCell);
-                    GD.Print($"[Battle] ✓ Valid target: {targetCell} (offset {offset})");
+                    GD.Print($"VALID: {targetCell}");
                 }
-                else
-                {
-                    GD.Print($"[Battle] ✗ Invalid target: {targetCell} (blocked by targeting rules for {actionConfig.TargetType})");
-                }
-            }
-            else
-            {
-                GD.Print($"[Battle] ✗ Invalid target: {targetCell} (off grid or invalid cell)");
             }
         }
         
-        // Check self-targeting
         if (hexGrid != null && hexGrid.CanTargetSelf(actionConfig.TargetType))
         {
             if (!validTargets.Contains(playerPosition))
             {
                 validTargets.Add(playerPosition);
-                GD.Print($"[Battle] ✓ Added self-target: {playerPosition}");
             }
         }
-        else
-        {
-            GD.Print($"[Battle] ⚠ Self-targeting not allowed for {actionConfig.TargetType}");
-        }
         
-        GD.Print($"[Battle] ═══ CALCULATION COMPLETE ═══");
-        GD.Print($"[Battle] Final valid targets: [{string.Join(", ", validTargets)}]");
         return validTargets;
     }
     
