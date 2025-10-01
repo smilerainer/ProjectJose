@@ -101,7 +101,6 @@ public partial class BattleManager : Node
     {
         actionHandler.ProcessSubmenuSelection(actionName);
         
-        // Pass ActionConfig to UI instead of static AOE pattern
         var actionConfig = actionHandler.GetCurrentActionConfig();
         if (actionConfig != null)
         {
