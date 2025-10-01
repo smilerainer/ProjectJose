@@ -1,379 +1,379 @@
 {
   "skills": [
-    {
-      "id": "direct_hit",
-      "name": "Direct Hit",
-      "description": "DEBUG: Only targets enemies, shows all filter logic",
-      "damage": 20,
-      "cost": 3,
-      "range": 2,
-      "targetType": "Enemy",
-      "speed": 1.0,
-      "debugMode": true,
-      "requiresLineOfSight": true,
-      "excludeTypes": ["Ally", "Player"],
-      "useRadiusRange": true,
-      "aoePattern": [
-        {"x": 0, "y": 0}
-      ]
-    },
-    {
-      "id": "mortar_strike",
-      "name": "Mortar Strike",
-      "description": "DEBUG: Radius 5 whitelist with radius 1 blacklist (donut pattern)",
-      "damage": 35,
-      "cost": 8,
-      "range": 5,
-      "targetType": "Area",
-      "speed": 0.5,
-      "debugMode": true,
-      "excludeTypes": ["Ally"],
-      "useRadiusRange": true,
-      "blacklist": [
-        {"type": "radius", "center": {"x": 0, "y": 0}, "radius": 1}
-      ],
-      "aoeRadius": 1
-    },
-    {
-      "id": "ground_only_slam",
-      "name": "Ground Slam",
-      "description": "DEBUG: Only targets empty ground cells, not entities",
-      "damage": 25,
-      "cost": 5,
-      "range": 2,
-      "targetType": "Area",
-      "speed": 1.0,
-      "debugMode": true,
-      "targetEmptyCellsOnly": true,
-      "excludeOccupied": true,
-      "useRadiusRange": true,
-      "aoeRadius": 2
-    },
-    {
-      "id": "ally_only_buff",
-      "name": "Ally Buff",
-      "description": "DEBUG: Only targets allies, excludes self",
-      "healAmount": 15,
-      "cost": 4,
-      "range": 3,
-      "targetType": "Ally",
-      "speed": 1.5,
-      "debugMode": true,
-      "excludeSelf": true,
-      "excludeTypes": ["Enemy", "Player"],
-      "statusEffect": "Buffed",
-      "statusDuration": 3,
-      "useRadiusRange": true,
-      "aoePattern": [
-        {"x": 0, "y": 0}
-      ]
-    },
-    {
-      "id": "self_only_shield",
-      "name": "Self Shield",
-      "description": "DEBUG: Can only target self",
-      "cost": 2,
-      "range": 0,
-      "targetType": "Self",
-      "speed": 2.0,
-      "debugMode": true,
-      "targetSelfOnly": true,
-      "statusEffect": "Shielded",
-      "statusDuration": 2,
-      "rangePattern": [
-        {"x": 0, "y": 0}
-      ],
-      "aoePattern": [
-        {"x": 0, "y": 0}
-      ]
-    },
-    {
-      "id": "line_attack",
-      "name": "Line Attack",
-      "description": "DEBUG: Target adjacent cell to set direction, line extends through + overshoot",
-      "damage": 30,
-      "cost": 6,
-      "range": 1,
-      "targetType": "Area",
-      "speed": 0.7,
-      "debugMode": true,
-      "requiresLineOfSight": false,
-      "rangePattern": [
-        {"x": 1, "y": 0},
-        {"x": -1, "y": 0},
-        {"x": 0, "y": 1},
-        {"x": 0, "y": -1},
-        {"x": 1, "y": -1},
-        {"x": -1, "y": -1}
-      ],
-      "aoeType": "line",
-      "aoeWidth": 1,
-      "aoeOvershoot": 5,
-      "excludeOrigin": true
-    },
-    {
-      "id": "exclude_multiple",
-      "name": "Exclude Multiple",
-      "description": "DEBUG: Complex filter - excludes Player, NPC, and occupied cells",
-      "damage": 18,
-      "cost": 4,
-      "range": 2,
-      "targetType": "Enemy",
-      "speed": 1.0,
-      "debugMode": true,
-      "excludeTypes": ["Player", "NPC", "Neutral"],
-      "excludeOccupied": false,
-      "useRadiusRange": true,
-      "aoePattern": [
-        {"x": 0, "y": 0}
-      ]
-    },
-    {
-      "id": "inverse_aoe",
-      "name": "Inverse AOE",
-      "description": "DEBUG: Targets center but AOE hits surrounding, not center",
-      "damage": 20,
-      "cost": 7,
-      "range": 3,
-      "targetType": "Area",
-      "speed": 0.9,
-      "debugMode": true,
-      "inverseAOE": true,
-      "useRadiusRange": true,
-      "aoePattern": [
-        {"x": 1, "y": 0},
-        {"x": -1, "y": 0},
-        {"x": 0, "y": 1},
-        {"x": 0, "y": -1},
-        {"x": 1, "y": -1},
-        {"x": -1, "y": -1}
-      ]
-    }
+	{
+	  "id": "direct_hit",
+	  "name": "Direct Hit",
+	  "description": "DEBUG: Only targets enemies, shows all filter logic",
+	  "damage": 20,
+	  "cost": 3,
+	  "range": 2,
+	  "targetType": "Enemy",
+	  "speed": 1.0,
+	  "debugMode": true,
+	  "requiresLineOfSight": true,
+	  "excludeTypes": ["Ally", "Player"],
+	  "useRadiusRange": true,
+	  "aoePattern": [
+		{"x": 0, "y": 0}
+	  ]
+	},
+	{
+	  "id": "mortar_strike",
+	  "name": "Mortar Strike",
+	  "description": "DEBUG: Radius 5 whitelist with radius 1 blacklist (donut pattern)",
+	  "damage": 35,
+	  "cost": 8,
+	  "range": 5,
+	  "targetType": "Area",
+	  "speed": 0.5,
+	  "debugMode": true,
+	  "excludeTypes": ["Ally"],
+	  "useRadiusRange": true,
+	  "blacklist": [
+		{"type": "radius", "center": {"x": 0, "y": 0}, "radius": 1}
+	  ],
+	  "aoeRadius": 1
+	},
+	{
+	  "id": "ground_only_slam",
+	  "name": "Ground Slam",
+	  "description": "DEBUG: Only targets empty ground cells, not entities",
+	  "damage": 25,
+	  "cost": 5,
+	  "range": 2,
+	  "targetType": "Area",
+	  "speed": 1.0,
+	  "debugMode": true,
+	  "targetEmptyCellsOnly": true,
+	  "excludeOccupied": true,
+	  "useRadiusRange": true,
+	  "aoeRadius": 2
+	},
+	{
+	  "id": "ally_only_buff",
+	  "name": "Ally Buff",
+	  "description": "DEBUG: Only targets allies, excludes self",
+	  "healAmount": 15,
+	  "cost": 4,
+	  "range": 3,
+	  "targetType": "Ally",
+	  "speed": 1.5,
+	  "debugMode": true,
+	  "excludeSelf": true,
+	  "excludeTypes": ["Enemy", "Player"],
+	  "statusEffect": "Buffed",
+	  "statusDuration": 3,
+	  "useRadiusRange": true,
+	  "aoePattern": [
+		{"x": 0, "y": 0}
+	  ]
+	},
+	{
+	  "id": "self_only_shield",
+	  "name": "Self Shield",
+	  "description": "DEBUG: Can only target self",
+	  "cost": 2,
+	  "range": 0,
+	  "targetType": "Self",
+	  "speed": 2.0,
+	  "debugMode": true,
+	  "targetSelfOnly": true,
+	  "statusEffect": "Shielded",
+	  "statusDuration": 2,
+	  "rangePattern": [
+		{"x": 0, "y": 0}
+	  ],
+	  "aoePattern": [
+		{"x": 0, "y": 0}
+	  ]
+	},
+	{
+	  "id": "line_attack",
+	  "name": "Line Attack",
+	  "description": "DEBUG: Target adjacent cell to set direction, line extends through + overshoot",
+	  "damage": 30,
+	  "cost": 6,
+	  "range": 1,
+	  "targetType": "Area",
+	  "speed": 0.7,
+	  "debugMode": true,
+	  "requiresLineOfSight": false,
+	  "rangePattern": [
+		{"x": 1, "y": 0},
+		{"x": -1, "y": 0},
+		{"x": 0, "y": 1},
+		{"x": 0, "y": -1},
+		{"x": 1, "y": -1},
+		{"x": -1, "y": -1}
+	  ],
+	  "aoeType": "line",
+	  "aoeWidth": 1,
+	  "aoeOvershoot": 5,
+	  "excludeOrigin": true
+	},
+	{
+	  "id": "exclude_multiple",
+	  "name": "Exclude Multiple",
+	  "description": "DEBUG: Complex filter - excludes Player, NPC, and occupied cells",
+	  "damage": 18,
+	  "cost": 4,
+	  "range": 2,
+	  "targetType": "Enemy",
+	  "speed": 1.0,
+	  "debugMode": true,
+	  "excludeTypes": ["Player", "NPC", "Neutral"],
+	  "excludeOccupied": false,
+	  "useRadiusRange": true,
+	  "aoePattern": [
+		{"x": 0, "y": 0}
+	  ]
+	},
+	{
+	  "id": "inverse_aoe",
+	  "name": "Inverse AOE",
+	  "description": "DEBUG: Targets center but AOE hits surrounding, not center",
+	  "damage": 20,
+	  "cost": 7,
+	  "range": 3,
+	  "targetType": "Area",
+	  "speed": 0.9,
+	  "debugMode": true,
+	  "inverseAOE": true,
+	  "useRadiusRange": true,
+	  "aoePattern": [
+		{"x": 1, "y": 0},
+		{"x": -1, "y": 0},
+		{"x": 0, "y": 1},
+		{"x": 0, "y": -1},
+		{"x": 1, "y": -1},
+		{"x": -1, "y": -1}
+	  ]
+	}
   ],
   "items": [
-    {
-      "id": "health_potion",
-      "name": "Health Potion",
-      "description": "DEBUG: Heals only allies, not self",
-      "healAmount": 50,
-      "usesRemaining": 3,
-      "range": 2,
-      "targetType": "Ally",
-      "speed": 2.0,
-      "debugMode": true,
-      "excludeSelf": true,
-      "useRadiusRange": true,
-      "aoePattern": [
-        {"x": 0, "y": 0}
-      ]
-    },
-    {
-      "id": "trap",
-      "name": "Bear Trap",
-      "description": "DEBUG: Only placeable on empty ground",
-      "damage": 30,
-      "usesRemaining": 2,
-      "range": 2,
-      "targetType": "Area",
-      "speed": 1.0,
-      "debugMode": true,
-      "targetEmptyCellsOnly": true,
-      "excludeOccupied": true,
-      "statusEffect": "Trapped",
-      "statusDuration": 2,
-      "rangePattern": [
-        {"x": 1, "y": 0},
-        {"x": -1, "y": 0},
-        {"x": 0, "y": 1},
-        {"x": 0, "y": -1},
-        {"x": 1, "y": -1},
-        {"x": -1, "y": -1}
-      ],
-      "aoePattern": [
-        {"x": 0, "y": 0}
-      ]
-    },
-    {
-      "id": "smoke_bomb",
-      "name": "Smoke Bomb",
-      "description": "DEBUG: All tiles in range valid except caster position",
-      "statusEffect": "Concealed",
-      "statusDuration": 3,
-      "usesRemaining": 2,
-      "range": 3,
-      "targetType": "Area",
-      "speed": 0.8,
-      "debugMode": true,
-      "allTilesValid": true,
-      "useRadiusRange": true,
-      "blacklist": [
-        {"type": "coordinate", "x": 0, "y": 0}
-      ],
-      "aoeRadius": 1
-    },
-    {
-      "id": "enemy_only_poison",
-      "name": "Poison Flask",
-      "description": "DEBUG: Only targets enemies with type filter",
-      "damage": 15,
-      "statusEffect": "Poison",
-      "statusDuration": 3,
-      "usesRemaining": 4,
-      "range": 2,
-      "targetType": "Enemy",
-      "speed": 1.2,
-      "debugMode": true,
-      "excludeTypes": ["Ally", "Player", "NPC"],
-      "useRadiusRange": true,
-      "aoePattern": [
-        {"x": 0, "y": 0}
-      ]
-    }
+	{
+	  "id": "health_potion",
+	  "name": "Health Potion",
+	  "description": "DEBUG: Heals only allies, not self",
+	  "healAmount": 50,
+	  "usesRemaining": 3,
+	  "range": 2,
+	  "targetType": "Ally",
+	  "speed": 2.0,
+	  "debugMode": true,
+	  "excludeSelf": true,
+	  "useRadiusRange": true,
+	  "aoePattern": [
+		{"x": 0, "y": 0}
+	  ]
+	},
+	{
+	  "id": "trap",
+	  "name": "Bear Trap",
+	  "description": "DEBUG: Only placeable on empty ground",
+	  "damage": 30,
+	  "usesRemaining": 2,
+	  "range": 2,
+	  "targetType": "Area",
+	  "speed": 1.0,
+	  "debugMode": true,
+	  "targetEmptyCellsOnly": true,
+	  "excludeOccupied": true,
+	  "statusEffect": "Trapped",
+	  "statusDuration": 2,
+	  "rangePattern": [
+		{"x": 1, "y": 0},
+		{"x": -1, "y": 0},
+		{"x": 0, "y": 1},
+		{"x": 0, "y": -1},
+		{"x": 1, "y": -1},
+		{"x": -1, "y": -1}
+	  ],
+	  "aoePattern": [
+		{"x": 0, "y": 0}
+	  ]
+	},
+	{
+	  "id": "smoke_bomb",
+	  "name": "Smoke Bomb",
+	  "description": "DEBUG: All tiles in range valid except caster position",
+	  "statusEffect": "Concealed",
+	  "statusDuration": 3,
+	  "usesRemaining": 2,
+	  "range": 3,
+	  "targetType": "Area",
+	  "speed": 0.8,
+	  "debugMode": true,
+	  "allTilesValid": true,
+	  "useRadiusRange": true,
+	  "blacklist": [
+		{"type": "coordinate", "x": 0, "y": 0}
+	  ],
+	  "aoeRadius": 1
+	},
+	{
+	  "id": "enemy_only_poison",
+	  "name": "Poison Flask",
+	  "description": "DEBUG: Only targets enemies with type filter",
+	  "damage": 15,
+	  "statusEffect": "Poison",
+	  "statusDuration": 3,
+	  "usesRemaining": 4,
+	  "range": 2,
+	  "targetType": "Enemy",
+	  "speed": 1.2,
+	  "debugMode": true,
+	  "excludeTypes": ["Ally", "Player", "NPC"],
+	  "useRadiusRange": true,
+	  "aoePattern": [
+		{"x": 0, "y": 0}
+	  ]
+	}
   ],
   "talkOptions": [
-    {
-      "id": "negotiate",
-      "name": "Negotiate",
-      "description": "DEBUG: Only works on enemies within range",
-      "dialogue": "Let's talk this through...",
-      "friendshipChange": 15,
-      "moneyChange": -5,
-      "range": 2,
-      "targetType": "Enemy",
-      "speed": 1.0,
-      "debugMode": true,
-      "excludeTypes": ["Ally", "Player"],
-      "rangePattern": [
-        {"x": 1, "y": 0},
-        {"x": -1, "y": 0},
-        {"x": 0, "y": 1},
-        {"x": 0, "y": -1},
-        {"x": 1, "y": -1},
-        {"x": -1, "y": -1}
-      ],
-      "aoePattern": [
-        {"x": 0, "y": 0}
-      ]
-    },
-    {
-      "id": "intimidate",
-      "name": "Intimidate",
-      "description": "DEBUG: Affects all enemies in AOE, excludes allies",
-      "dialogue": "Back off now!",
-      "reputationChange": 5,
-      "friendshipChange": -10,
-      "statusEffect": "Frightened",
-      "statusDuration": 2,
-      "range": 2,
-      "targetType": "Enemy",
-      "speed": 0.8,
-      "debugMode": true,
-      "excludeTypes": ["Ally", "Player"],
-      "useRadiusRange": true,
-      "aoePattern": [
-        {"x": 0, "y": 0},
-        {"x": 1, "y": 0},
-        {"x": -1, "y": 0}
-      ]
-    },
-    {
-      "id": "rally_distant",
-      "name": "Rally Distant Allies",
-      "description": "DEBUG: All allies in range valid, except those adjacent to caster",
-      "dialogue": "Hold the line!",
-      "statusEffect": "Motivated",
-      "statusDuration": 3,
-      "range": 4,
-      "targetType": "Ally",
-      "speed": 1.0,
-      "debugMode": true,
-      "excludeSelf": true,
-      "allTilesValid": true,
-      "useRadiusRange": true,
-      "blacklist": [
-        {"type": "radius", "center": {"x": 0, "y": 0}, "radius": 1}
-      ],
-      "aoePattern": [
-        {"x": 0, "y": 0},
-        {"x": 1, "y": 0},
-        {"x": -1, "y": 0}
-      ]
-    }
+	{
+	  "id": "negotiate",
+	  "name": "Negotiate",
+	  "description": "DEBUG: Only works on enemies within range",
+	  "dialogue": "Let's talk this through...",
+	  "friendshipChange": 15,
+	  "moneyChange": -5,
+	  "range": 2,
+	  "targetType": "Enemy",
+	  "speed": 1.0,
+	  "debugMode": true,
+	  "excludeTypes": ["Ally", "Player"],
+	  "rangePattern": [
+		{"x": 1, "y": 0},
+		{"x": -1, "y": 0},
+		{"x": 0, "y": 1},
+		{"x": 0, "y": -1},
+		{"x": 1, "y": -1},
+		{"x": -1, "y": -1}
+	  ],
+	  "aoePattern": [
+		{"x": 0, "y": 0}
+	  ]
+	},
+	{
+	  "id": "intimidate",
+	  "name": "Intimidate",
+	  "description": "DEBUG: Affects all enemies in AOE, excludes allies",
+	  "dialogue": "Back off now!",
+	  "reputationChange": 5,
+	  "friendshipChange": -10,
+	  "statusEffect": "Frightened",
+	  "statusDuration": 2,
+	  "range": 2,
+	  "targetType": "Enemy",
+	  "speed": 0.8,
+	  "debugMode": true,
+	  "excludeTypes": ["Ally", "Player"],
+	  "useRadiusRange": true,
+	  "aoePattern": [
+		{"x": 0, "y": 0},
+		{"x": 1, "y": 0},
+		{"x": -1, "y": 0}
+	  ]
+	},
+	{
+	  "id": "rally_distant",
+	  "name": "Rally Distant Allies",
+	  "description": "DEBUG: All allies in range valid, except those adjacent to caster",
+	  "dialogue": "Hold the line!",
+	  "statusEffect": "Motivated",
+	  "statusDuration": 3,
+	  "range": 4,
+	  "targetType": "Ally",
+	  "speed": 1.0,
+	  "debugMode": true,
+	  "excludeSelf": true,
+	  "allTilesValid": true,
+	  "useRadiusRange": true,
+	  "blacklist": [
+		{"type": "radius", "center": {"x": 0, "y": 0}, "radius": 1}
+	  ],
+	  "aoePattern": [
+		{"x": 0, "y": 0},
+		{"x": 1, "y": 0},
+		{"x": -1, "y": 0}
+	  ]
+	}
   ],
   "moveOptions": [
-    {
-      "id": "walk",
-      "name": "Walk",
-      "description": "DEBUG: Move to adjacent hex, excludes occupied",
-      "range": 1,
-      "cost": 0,
-      "targetType": "Movement",
-      "speed": 1.0,
-      "debugMode": true,
-      "excludeOccupied": true,
-      "rangePattern": [
-        {"x": 1, "y": 0},
-        {"x": -1, "y": 0},
-        {"x": 0, "y": 1},
-        {"x": 0, "y": -1},
-        {"x": 1, "y": -1},
-        {"x": -1, "y": -1}
-      ],
-      "aoePattern": [
-        {"x": 0, "y": 0}
-      ]
-    },
-    {
-      "id": "dash",
-      "name": "Dash",
-      "description": "DEBUG: Quick movement 2 tiles, can't pass through entities",
-      "range": 2,
-      "cost": 1,
-      "targetType": "Movement",
-      "speed": 2.0,
-      "debugMode": true,
-      "excludeOccupied": true,
-      "requiresLineOfSight": true,
-      "useRadiusRange": true,
-      "aoePattern": [
-        {"x": 0, "y": 0}
-      ]
-    },
-    {
-      "id": "teleport",
-      "name": "Teleport",
-      "description": "DEBUG: Teleport to any tile on the map, excludes occupied",
-      "range": 999,
-      "cost": 3,
-      "targetType": "Movement",
-      "speed": 3.0,
-      "debugMode": true,
-      "excludeOccupied": true,
-      "requiresLineOfSight": false,
-      "ignoreObstacles": true,
-      "allTilesValid": true,
-      "aoePattern": [
-        {"x": 0, "y": 0}
-      ]
-    }
+	{
+	  "id": "walk",
+	  "name": "Walk",
+	  "description": "DEBUG: Move to adjacent hex, excludes occupied",
+	  "range": 1,
+	  "cost": 0,
+	  "targetType": "Movement",
+	  "speed": 1.0,
+	  "debugMode": true,
+	  "excludeOccupied": true,
+	  "rangePattern": [
+		{"x": 1, "y": 0},
+		{"x": -1, "y": 0},
+		{"x": 0, "y": 1},
+		{"x": 0, "y": -1},
+		{"x": 1, "y": -1},
+		{"x": -1, "y": -1}
+	  ],
+	  "aoePattern": [
+		{"x": 0, "y": 0}
+	  ]
+	},
+	{
+	  "id": "dash",
+	  "name": "Dash",
+	  "description": "DEBUG: Quick movement 2 tiles, can't pass through entities",
+	  "range": 2,
+	  "cost": 1,
+	  "targetType": "Movement",
+	  "speed": 2.0,
+	  "debugMode": true,
+	  "excludeOccupied": true,
+	  "requiresLineOfSight": true,
+	  "useRadiusRange": true,
+	  "aoePattern": [
+		{"x": 0, "y": 0}
+	  ]
+	},
+	{
+	  "id": "teleport",
+	  "name": "Teleport",
+	  "description": "DEBUG: Teleport to any tile on the map, excludes occupied",
+	  "range": 999,
+	  "cost": 3,
+	  "targetType": "Movement",
+	  "speed": 3.0,
+	  "debugMode": true,
+	  "excludeOccupied": true,
+	  "requiresLineOfSight": false,
+	  "ignoreObstacles": true,
+	  "allTilesValid": true,
+	  "aoePattern": [
+		{"x": 0, "y": 0}
+	  ]
+	}
   ],
   "settings": {
-    "startingMoney": 150,
-    "maxPartySize": 4,
-    "defaultMoveRange": 1,
-    "enableFriendlyFire": false,
-    "enableCriticalHits": true,
-    "enableStatusEffects": true,
-    "customSettings": {
-      "debugMode": true,
-      "showRangeIndicators": true,
-      "showAoeIndicators": true,
-      "showExcludedCells": true,
-      "showFilterInfo": true,
-      "enableAdvancedCombat": true,
-      "useHexGrid": true,
-      "logTargetFilters": true,
-      "visualizeLineOfSight": true
-    }
+	"startingMoney": 150,
+	"maxPartySize": 4,
+	"defaultMoveRange": 1,
+	"enableFriendlyFire": false,
+	"enableCriticalHits": true,
+	"enableStatusEffects": true,
+	"customSettings": {
+	  "debugMode": true,
+	  "showRangeIndicators": true,
+	  "showAoeIndicators": true,
+	  "showExcludedCells": true,
+	  "showFilterInfo": true,
+	  "enableAdvancedCombat": true,
+	  "useHexGrid": true,
+	  "logTargetFilters": true,
+	  "visualizeLineOfSight": true
+	}
   }
 }

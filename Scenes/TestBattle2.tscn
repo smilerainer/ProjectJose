@@ -1,29 +1,29 @@
 [gd_scene load_steps=7 format=3 uid="uid://bk6idb5cfptin"]
 
-[ext_resource type="Script" uid="uid://dnpcp2rry7ahc" path="res://Assets/Scripts/BattleManager.cs" id="1_kei0r"]
+[ext_resource type="Script" uid="uid://b6balrd0xxohw" path="res://Scripts/UI/CentralInputManager.cs" id="2_kei0r"]
 [ext_resource type="PackedScene" uid="uid://f2q4l46jsk8c" path="res://Assets/World/World.tscn" id="2_n21b5"]
 [ext_resource type="Texture2D" uid="uid://b7mqiykktuwvt" path="res://Assets/Interface/default_cursor_down.png" id="3_ad07i"]
-[ext_resource type="Script" uid="uid://b6balrd0xxohw" path="res://Assets/Scripts/CentralInputManager.cs" id="3_arbkf"]
 [ext_resource type="PackedScene" uid="uid://ducsxw626vu8p" path="res://Assets/Interface/MenuActions.tscn" id="3_kei0r"]
+[ext_resource type="Script" uid="uid://dnpcp2rry7ahc" path="res://Scripts/Battle/BattleManager.cs" id="4_ad07i"]
 [ext_resource type="PackedScene" uid="uid://nway3slkhl43" path="res://Assets/Interface/DynamicMenu.tscn" id="6_ad07i"]
 
 [node name="TestBattle2" type="Node2D"]
 position = Vector2(1, -2)
 
 [node name="HexGrid" parent="." instance=ExtResource("2_n21b5")]
-position = Vector2(-3, 4)
+position = Vector2(159, 92)
 
 [node name="CentralInputManager" type="Node2D" parent="." node_paths=PackedStringArray("dynamicMenuRoot")]
-position = Vector2(-2, 6)
+position = Vector2(168, -70)
 scale = Vector2(2.94759, 1.28409)
-script = ExtResource("3_arbkf")
+script = ExtResource("2_kei0r")
 cursorTexture = ExtResource("3_ad07i")
-uiCursorOffset = Vector2(-21, 0)
-enableCursorSnapping = false
+uiCursorOffset = Vector2(20, 0)
 dynamicMenuRoot = NodePath("../UI/DynamicMenu")
 
 [node name="BattleManager" type="Node2D" parent="."]
-script = ExtResource("1_kei0r")
+position = Vector2(167, -82)
+script = ExtResource("4_ad07i")
 
 [node name="UI" type="CanvasLayer" parent="."]
 

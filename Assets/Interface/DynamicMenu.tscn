@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://nway3slkhl43"]
 
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="2_i0075"]
-[ext_resource type="Script" uid="uid://wg6uugbtbefy" path="res://Assets/Scripts/MenuControls.cs" id="3_14c72"]
+[ext_resource type="Script" uid="uid://wg6uugbtbefy" path="res://Scripts/UI/MenuControls.cs" id="3_14c72"]
 
 [node name="CanvasLayer" type="Control"]
 custom_minimum_size = Vector2(64, 32)

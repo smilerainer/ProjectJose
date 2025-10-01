@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://ducsxw626vu8p"]
 
 [ext_resource type="Texture2D" uid="uid://c2l5jcbusptmc" path="res://Assets/Interface/default_9patch.png" id="1_cangj"]
-[ext_resource type="Script" uid="uid://wg6uugbtbefy" path="res://Assets/Scripts/MenuControls.cs" id="2_104n5"]
+[ext_resource type="Script" uid="uid://wg6uugbtbefy" path="res://Scripts/UI/MenuControls.cs" id="2_104n5"]
 
 [node name="CanvasLayer" type="Control"]
 custom_minimum_size = Vector2(0, 32)
@@ -39,7 +39,6 @@ patch_margin_bottom = 8
 layout_mode = 2
 alignment = 1
 script = ExtResource("2_104n5")
-wrapNavigation = false
 
 [node name="HBoxContainer" type="HBoxContainer" parent="UI/VBoxContainer"]
 layout_mode = 2
