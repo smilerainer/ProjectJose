@@ -2,6 +2,7 @@
 using Godot;
 using System.Collections.Generic;
 using System.Linq;
+using CustomJsonSystem;
 
 public class BattleUIController
 {
@@ -19,17 +20,21 @@ public class BattleUIController
     
     private bool isInSubmenu = false;
     private bool targetSelectionActive = false;
+    private ActionConfig currentActionConfig; // ADD THIS
+    private BattleActionHandler actionHandler; // ADD THIS
     
     #endregion
-    
+
     #region Initialization
-    
+
     public void Initialize(BattleManager battleManager)
     {
         this.battleManager = battleManager;
+        this.actionHandler = battleManager.GetActionHandler(); // ADD THIS
         FindUIComponents(battleManager);
         ConnectSignals();
     }
+
     
     private void FindUIComponents(BattleManager battleManager)
     {
@@ -137,9 +142,10 @@ public class BattleUIController
     
     #region Target Selection UI
     
-    public void StartTargetSelection(List<Vector2I> validTargets, List<Vector2I> aoePattern, string targetType)
+    public void StartTargetSelection(List<Vector2I> validTargets, ActionConfig actionConfig)
     {
         targetSelectionActive = true;
+        currentActionConfig = actionConfig; // STORE IT
         
         HideMainMenu();
         HideSubmenu();
@@ -153,18 +159,20 @@ public class BattleUIController
         {
             hexControls.SetActive(true);
             hexControls.SetValidCells(validTargets.ToHashSet());
-            hexControls.SetTargetingInfo(targetType, aoePattern);
+            hexControls.SetActionConfig(actionConfig, actionHandler); // PASS CONFIG + HANDLER
             hexControls.EnterInteractionMode();
         }
         
-        GD.Print($"[BattleUI] Target selection started - {validTargets.Count} valid targets, TargetType: {targetType}");
+        GD.Print($"[BattleUI] Target selection started - {validTargets.Count} valid targets, TargetType: {actionConfig.TargetType}");
     }
+
     
     public void EndTargetSelection()
     {
         if (!targetSelectionActive) return;
         
         targetSelectionActive = false;
+        currentActionConfig = null; // CLEAR IT
         
         if (hexGrid != null)
         {

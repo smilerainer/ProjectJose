@@ -18,26 +18,7 @@ namespace CustomJsonSystem
         public GameSettings Settings { get; set; } = new();
     }
     
-    public class ActionConfig
-    {
-        public string Id { get; set; } = "";
-        public string Name { get; set; } = "";
-        public string Description { get; set; } = "";
-        public int Cost { get; set; } = 0;
-        public int Damage { get; set; } = 0;
-        public int HealAmount { get; set; } = 0;
-        public string StatusEffect { get; set; } = "";
-        public int StatusDuration { get; set; } = 0;
-        public int Range { get; set; } = 1;
-        public string TargetType { get; set; } = "Single";
-        public string Dialogue { get; set; } = "";
-        public int FriendshipChange { get; set; } = 0;
-        public int ReputationChange { get; set; } = 0;
-        public int UsesRemaining { get; set; } = -1; // -1 = unlimited
-        public List<PatternCell> RangePattern { get; set; } = new();
-        public List<PatternCell> AoePattern { get; set; } = new();
-        public Dictionary<string, object> CustomProperties { get; set; } = new();
-    }
+
     
     public class PatternCell
     {
@@ -121,10 +102,11 @@ namespace CustomJsonSystem
         public static Vector2IData FromVector2I(Vector2I vector) => new() { X = vector.X, Y = vector.Y };
     }
     
+    
     #endregion
-    
+
     #region Generic JSON Loader
-    
+
     public static class CustomJsonLoader
     {
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -134,9 +116,9 @@ namespace CustomJsonSystem
             Converters = { new JsonStringEnumConverter() },
             ReadCommentHandling = JsonCommentHandling.Skip
         };
-        
+
         #region Generic Load/Save Methods
-        
+
         public static T LoadFromFile<T>(string filePath) where T : class, new()
         {
             try
@@ -147,10 +129,10 @@ namespace CustomJsonSystem
                     GD.PrintErr($"File not found: {filePath}");
                     return new T();
                 }
-                
+
                 string json = file.GetAsText();
                 file.Close();
-                
+
                 var result = JsonSerializer.Deserialize<T>(json, JsonOptions);
                 GD.Print($"Loaded {typeof(T).Name} from: {filePath}");
                 return result ?? new T();
@@ -161,7 +143,7 @@ namespace CustomJsonSystem
                 return new T();
             }
         }
-        
+
         public static void SaveToFile<T>(T data, string filePath) where T : class
         {
             try
@@ -184,7 +166,7 @@ namespace CustomJsonSystem
                 GD.PrintErr($"Failed to save {typeof(T).Name}: {ex.Message}");
             }
         }
-        
+
         public static string ToJsonString<T>(T data) where T : class
         {
             try
@@ -197,7 +179,7 @@ namespace CustomJsonSystem
                 return "{}";
             }
         }
-        
+
         public static T FromJsonString<T>(string json) where T : class, new()
         {
             try
@@ -210,12 +192,12 @@ namespace CustomJsonSystem
                 return new T();
             }
         }
-        
+
         public static bool FileExists(string filePath)
         {
             return FileAccess.FileExists(filePath);
         }
-        
+
         public static bool ValidateJsonFile<T>(string filePath) where T : class, new()
         {
             try
@@ -228,15 +210,15 @@ namespace CustomJsonSystem
                 return false;
             }
         }
-        
+
         #endregion
-        
+
         #region Specific Helper Methods
-        
+
         public static BattleConfigData LoadBattleConfig(string filePath)
         {
             var config = LoadFromFile<BattleConfigData>(filePath);
-            
+
             // Don't create default config - let the system handle missing configs better
             if (config.Skills.Count == 0 && config.Items.Count == 0 && config.MoveOptions.Count == 0 && config.TalkOptions.Count == 0)
             {
@@ -244,127 +226,21 @@ namespace CustomJsonSystem
                 // Return the empty config instead of a default one to avoid issues
                 return config;
             }
-            
+
             return config;
         }
-        
+
         public static GameSaveData LoadGameSave(string filePath)
         {
             return LoadFromFile<GameSaveData>(filePath);
         }
-        
+
         public static void SaveGameData(GameSaveData saveData, string filePath)
         {
             saveData.Metadata.SaveTime = DateTime.Now;
             SaveToFile(saveData, filePath);
         }
-        
-        public static BattleConfigData CreateDefaultBattleConfig()
-        {
-            return new BattleConfigData
-            {
-                Skills = new List<ActionConfig>
-                {
-                    new() { 
-                        Id = "shroud", 
-                        Name = "Shroud", 
-                        Description = "Protective darkness", 
-                        Cost = 3, 
-                        StatusEffect = "Stealth", 
-                        StatusDuration = 3, 
-                        TargetType = "Self",
-                        Range = 0,
-                        RangePattern = new List<PatternCell> { new() { X = 0, Y = 0 } },
-                        AoePattern = new List<PatternCell> { new() { X = 0, Y = 0 } }
-                    }
-                },
-                Items = new List<ActionConfig>
-                {
-                    new() { 
-                        Id = "potion", 
-                        Name = "Potion", 
-                        Description = "Restores health", 
-                        HealAmount = 50, 
-                        UsesRemaining = 3,
-                        Range = 2,
-                        TargetType = "Ally",
-                        RangePattern = new List<PatternCell> 
-                        { 
-                            new() { X = 0, Y = 0 },
-                            new() { X = 1, Y = 0 },
-                            new() { X = -1, Y = 0 },
-                            new() { X = 0, Y = 1 },
-                            new() { X = 0, Y = -1 },
-                            new() { X = 1, Y = -1 },
-                            new() { X = -1, Y = -1 }
-                        },
-                        AoePattern = new List<PatternCell> { new() { X = 0, Y = 0 } }
-                    },
-                    new() { 
-                        Id = "ether", 
-                        Name = "Ether", 
-                        Description = "Restores energy", 
-                        Cost = -10, 
-                        UsesRemaining = 2, 
-                        TargetType = "Self",
-                        Range = 0,
-                        RangePattern = new List<PatternCell> { new() { X = 0, Y = 0 } },
-                        AoePattern = new List<PatternCell> { new() { X = 0, Y = 0 } }
-                    }
-                },
-                TalkOptions = new List<ActionConfig>
-                {
-                    new() { 
-                        Id = "negotiate", 
-                        Name = "Negotiate", 
-                        Description = "Attempt peaceful resolution", 
-                        Dialogue = "Let's talk this through...", 
-                        FriendshipChange = 10,
-                        Range = 2,
-                        TargetType = "Enemy",
-                        RangePattern = new List<PatternCell> 
-                        { 
-                            new() { X = 1, Y = 0 },
-                            new() { X = -1, Y = 0 },
-                            new() { X = 0, Y = 1 },
-                            new() { X = 0, Y = -1 },
-                            new() { X = 1, Y = -1 },
-                            new() { X = -1, Y = -1 }
-                        },
-                        AoePattern = new List<PatternCell> { new() { X = 0, Y = 0 } }
-                    }
-                },
-                MoveOptions = new List<ActionConfig>
-                {
-                    new() { 
-                        Id = "walk", 
-                        Name = "Walk", 
-                        Description = "Move to adjacent cell", 
-                        Range = 1,
-                        Cost = 0,
-                        TargetType = "Movement",
-                        RangePattern = new List<PatternCell> 
-                        { 
-                            new() { X = 1, Y = 0 },
-                            new() { X = -1, Y = 0 },
-                            new() { X = 0, Y = 1 },
-                            new() { X = 0, Y = -1 },
-                            new() { X = 1, Y = -1 },
-                            new() { X = -1, Y = -1 }
-                        },
-                        AoePattern = new List<PatternCell> { new() { X = 0, Y = 0 } }
-                    }
-                },
-                Settings = new GameSettings
-                {
-                    StartingMoney = 100,
-                    MaxPartySize = 4,
-                    DefaultMoveRange = 1,
-                    EnableFriendlyFire = false
-                }
-            };
-        }
-        
+
         public static GameSaveData CreateNewGameSave(string playerName = "Player")
         {
             return new GameSaveData
@@ -391,7 +267,7 @@ namespace CustomJsonSystem
                 }
             };
         }
-        
+
         #endregion
     }
     

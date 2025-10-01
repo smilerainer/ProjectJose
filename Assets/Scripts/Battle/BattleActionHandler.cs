@@ -13,12 +13,13 @@ public class BattleActionHandler
     
     #endregion
     
-    #region Action State
+    #region State
     
     private string currentActionType = "";
     private string selectedActionOption = "";
     private ActionConfig currentActionConfig;
     private List<Vector2I> currentValidTargets = new();
+    private bool debugEnabled = false;
     
     #endregion
     
@@ -28,23 +29,26 @@ public class BattleActionHandler
     {
         this.stateManager = stateManager;
         this.configLoader = configLoader;
-        
         GD.Print("[BattleAction] Action handler initialized");
+    }
+    
+    public void SetDebugEnabled(bool enabled)
+    {
+        debugEnabled = enabled;
+        DebugLog($"Debug enabled: {enabled}");
     }
     
     #endregion
     
-    #region Action Processing
+    #region Action Flow
     
     public void ProcessActionRequest(string actionType, string actionName)
     {
         currentActionType = actionType;
-        // Don't clear the action here - we need to keep the action type
         selectedActionOption = "";
         currentActionConfig = null;
         currentValidTargets.Clear();
-        
-        GD.Print($"[BattleAction] Action request: {actionType}");
+        DebugLog($"Action request: {actionType}");
     }
     
     public void ProcessSubmenuSelection(string actionName)
@@ -55,8 +59,7 @@ public class BattleActionHandler
         if (currentActionConfig != null)
         {
             currentValidTargets = CalculateValidTargets(currentActionConfig);
-            GD.Print($"[BattleAction] Action selected: {actionName}, {currentValidTargets.Count} valid targets");
-            GD.Print($"[BattleAction] Current action type: '{currentActionType}'");
+            DebugLog($"Action selected: {actionName}, {currentValidTargets.Count} valid targets");
         }
         else
         {
@@ -74,13 +77,12 @@ public class BattleActionHandler
         {
             GD.PrintErr("[BattleAction] Cannot execute - no current action config");
         }
-        
         ClearCurrentAction();
     }
     
     public void CancelCurrentAction()
     {
-        GD.Print("[BattleAction] Current action cancelled");
+        DebugLog("Current action cancelled");
         ClearCurrentAction();
     }
     
@@ -96,38 +98,27 @@ public class BattleActionHandler
     
     #region Action Execution
     
-    private void ExecuteAction(Vector2I targetCell, ActionConfig actionConfig)
+    private void ExecuteAction(Vector2I targetCell, ActionConfig config)
     {
-        GD.Print($"[BattleAction] Executing {currentActionType}: {actionConfig.Name} on {targetCell}");
+        DebugLog($"Executing {currentActionType}: {config.Name} on {targetCell}");
         
-        // Debug: Check if currentActionType is empty
         if (string.IsNullOrEmpty(currentActionType))
         {
-            GD.PrintErr("[BattleAction] ERROR: currentActionType is empty! Cannot determine action type.");
+            GD.PrintErr("[BattleAction] ERROR: currentActionType is empty!");
             return;
         }
         
         switch (currentActionType)
         {
-            case "move":
-                ExecuteMoveAction(targetCell, actionConfig);
-                break;
-            case "skill":
-                ExecuteSkillAction(targetCell, actionConfig);
-                break;
-            case "item":
-                ExecuteItemAction(targetCell, actionConfig);
-                break;
-            case "talk":
-                ExecuteTalkAction(targetCell, actionConfig);
-                break;
-            default:
-                GD.PrintErr($"[BattleAction] Unknown action type: '{currentActionType}'");
-                break;
+            case "move": ExecuteMoveAction(targetCell, config); break;
+            case "skill": ExecuteSkillAction(targetCell, config); break;
+            case "item": ExecuteItemAction(targetCell, config); break;
+            case "talk": ExecuteTalkAction(targetCell, config); break;
+            default: GD.PrintErr($"[BattleAction] Unknown action type: '{currentActionType}'"); break;
         }
     }
     
-    private void ExecuteMoveAction(Vector2I targetCell, ActionConfig actionConfig)
+    private void ExecuteMoveAction(Vector2I targetCell, ActionConfig config)
     {
         if (!currentValidTargets.Contains(targetCell))
         {
@@ -135,218 +126,394 @@ public class BattleActionHandler
             return;
         }
         
-        GD.Print($"[BattleAction] Moving player to {targetCell}");
         stateManager.MovePlayer(targetCell);
-        GD.Print($"[BattleAction] Move '{actionConfig.Name}' executed successfully");
-        
-        // Apply movement costs and effects
-        if (actionConfig.Cost > 0)
-        {
-            GD.Print($"[BattleAction] Movement cost: {actionConfig.Cost}");
-            // TODO: Integrate with BattleLogic money system
-        }
-        
-        // TODO: Integrate with BattleLogic MoveAction class
+        DebugLog($"Move '{config.Name}' executed, cost: {config.Cost}");
     }
     
-    private void ExecuteSkillAction(Vector2I targetCell, ActionConfig actionConfig)
+    private void ExecuteSkillAction(Vector2I targetCell, ActionConfig config)
     {
-        GD.Print($"[BattleAction] Skill '{actionConfig.Name}' targeting {targetCell}");
-        GD.Print($"[BattleAction] Description: {actionConfig.Description}");
-        
-        // Calculate affected cells (target + AOE)
-        var affectedCells = CalculateAffectedCells(targetCell, actionConfig);
+        DebugLog($"Skill '{config.Name}' targeting {targetCell}");
+        var affectedCells = CalculateAffectedCells(targetCell, config);
         
         foreach (var cell in affectedCells)
         {
-            // Apply damage
-            if (actionConfig.Damage > 0)
+            if (config.Damage > 0)
             {
-                stateManager.ApplyDamageToEntity(cell, actionConfig.Damage);
+                stateManager.ApplyDamageToEntity(cell, config.Damage);
+                DebugLog($"Dealt {config.Damage} damage to {cell}");
             }
             
-            // Apply status effects
-            if (!string.IsNullOrEmpty(actionConfig.StatusEffect))
+            if (!string.IsNullOrEmpty(config.StatusEffect))
             {
-                stateManager.ApplyStatusEffectToEntity(cell, actionConfig.StatusEffect);
+                stateManager.ApplyStatusEffectToEntity(cell, config.StatusEffect);
+                DebugLog($"Applied {config.StatusEffect} to {cell}");
             }
-            
-            // Remove status effects (if property exists in your ActionConfig)
-            // if (!string.IsNullOrEmpty(actionConfig.RemovesStatus))
-            // {
-            //     stateManager.RemoveStatusEffectFromEntity(cell, actionConfig.RemovesStatus);
-            // }
         }
         
-        // Apply skill costs
-        if (actionConfig.Cost > 0)
-        {
-            GD.Print($"[BattleAction] Skill cost: {actionConfig.Cost}");
-            // TODO: Integrate with BattleLogic money system
-        }
-        
-        // TODO: Integrate with BattleLogic SkillAction class
+        DebugLog($"Skill cost: {config.Cost}");
     }
     
-    private void ExecuteItemAction(Vector2I targetCell, ActionConfig actionConfig)
+    private void ExecuteItemAction(Vector2I targetCell, ActionConfig config)
     {
-        GD.Print($"[BattleAction] Item '{actionConfig.Name}' used on {targetCell}");
-        GD.Print($"[BattleAction] Description: {actionConfig.Description}");
-        
-        // Calculate affected cells
-        var affectedCells = CalculateAffectedCells(targetCell, actionConfig);
+        DebugLog($"Item '{config.Name}' used on {targetCell}");
+        var affectedCells = CalculateAffectedCells(targetCell, config);
         
         foreach (var cell in affectedCells)
         {
-            // Apply healing
-            if (actionConfig.HealAmount > 0)
+            if (config.HealAmount > 0)
             {
-                stateManager.ApplyHealingToEntity(cell, actionConfig.HealAmount);
+                stateManager.ApplyHealingToEntity(cell, config.HealAmount);
+                DebugLog($"Healed {config.HealAmount} at {cell}");
             }
             
-            // Apply damage (for offensive items)
-            if (actionConfig.Damage > 0)
+            if (config.Damage > 0)
             {
-                stateManager.ApplyDamageToEntity(cell, actionConfig.Damage);
+                stateManager.ApplyDamageToEntity(cell, config.Damage);
+                DebugLog($"Dealt {config.Damage} damage to {cell}");
             }
             
-            // Apply status effects
-            if (!string.IsNullOrEmpty(actionConfig.StatusEffect))
+            if (!string.IsNullOrEmpty(config.StatusEffect))
             {
-                stateManager.ApplyStatusEffectToEntity(cell, actionConfig.StatusEffect);
+                stateManager.ApplyStatusEffectToEntity(cell, config.StatusEffect);
             }
-            
-            // Remove status effects (if property exists in your ActionConfig)
-            // if (!string.IsNullOrEmpty(actionConfig.RemovesStatus))
-            // {
-            //     stateManager.RemoveStatusEffectFromEntity(cell, actionConfig.RemovesStatus);
-            // }
         }
         
-        // Handle item consumption
-        if (actionConfig.UsesRemaining > 0)
+        if (config.UsesRemaining > 0)
         {
-            actionConfig.UsesRemaining--;
-            GD.Print($"[BattleAction] {actionConfig.Name} remaining uses: {actionConfig.UsesRemaining}");
-            
-            if (actionConfig.UsesRemaining == 0)
-            {
-                GD.Print($"[BattleAction] {actionConfig.Name} is depleted!");
-            }
+            config.UsesRemaining--;
+            DebugLog($"{config.Name} uses remaining: {config.UsesRemaining}");
+            if (config.UsesRemaining == 0) GD.Print($"[BattleAction] {config.Name} depleted!");
         }
-        
-        // Apply item costs
-        if (actionConfig.Cost > 0)
-        {
-            GD.Print($"[BattleAction] Item cost: {actionConfig.Cost}");
-            // TODO: Integrate with BattleLogic money system
-        }
-        
-        // TODO: Integrate with BattleLogic ItemAction class
     }
     
-    private void ExecuteTalkAction(Vector2I targetCell, ActionConfig actionConfig)
+    private void ExecuteTalkAction(Vector2I targetCell, ActionConfig config)
     {
-        GD.Print($"[BattleAction] Talk action '{actionConfig.Name}' targeting {targetCell}");
-        
-        // Display dialogue
-        if (!string.IsNullOrEmpty(actionConfig.Dialogue))
+        if (!string.IsNullOrEmpty(config.Dialogue))
         {
-            GD.Print($"[BattleAction] Player says: \"{actionConfig.Dialogue}\"");
+            GD.Print($"[BattleAction] Player says: \"{config.Dialogue}\"");
         }
         
-        // Apply social effects to target
         if (stateManager.IsEnemyCell(targetCell) || stateManager.IsPlayerCell(targetCell))
         {
-            // Apply friendship changes
-            if (actionConfig.FriendshipChange != 0)
-            {
-                GD.Print($"[BattleAction] Friendship change: {(actionConfig.FriendshipChange > 0 ? "+" : "")}{actionConfig.FriendshipChange}");
-                // TODO: Integrate with BattleLogic Entity friendship system
-            }
-            
-            // Apply reputation changes
-            if (actionConfig.ReputationChange != 0)
-            {
-                GD.Print($"[BattleAction] Reputation change: {(actionConfig.ReputationChange > 0 ? "+" : "")}{actionConfig.ReputationChange}");
-                // TODO: Integrate with BattleLogic Entity reputation system
-            }
-            
-            // Award money from successful negotiations (if property exists in your ActionConfig)
-            // if (actionConfig.MoneyReward != 0)
-            // {
-            //     GD.Print($"[BattleAction] Money reward: {(actionConfig.MoneyReward > 0 ? "+" : "")}{actionConfig.MoneyReward}");
-            //     // TODO: Integrate with BattleLogic money system
-            // }
+            if (config.FriendshipChange != 0)
+                DebugLog($"Friendship: {(config.FriendshipChange > 0 ? "+" : "")}{config.FriendshipChange}");
+            if (config.ReputationChange != 0)
+                DebugLog($"Reputation: {(config.ReputationChange > 0 ? "+" : "")}{config.ReputationChange}");
         }
-        
-        // Apply talk action costs
-        if (actionConfig.Cost > 0)
-        {
-            GD.Print($"[BattleAction] Talk cost: {actionConfig.Cost}");
-            // TODO: Integrate with BattleLogic money system
-        }
-        
-        // TODO: Integrate with BattleLogic TalkAction class
     }
     
     #endregion
     
-    #region Target Calculation
+    #region Target Validation
     
-    private List<Vector2I> CalculateValidTargets(ActionConfig actionConfig)
+    private List<Vector2I> CalculateValidTargets(ActionConfig config)
     {
-        var validTargets = new List<Vector2I>();
-        var playerPosition = stateManager.GetPlayerPosition();
-        var rangePattern = actionConfig.RangePattern.Select(p => p.ToVector2I()).ToList();
+        var validTargets = new HashSet<Vector2I>();
+        var playerPos = stateManager.GetPlayerPosition();
         
-        // Use default hex pattern if none specified
-        if (rangePattern.Count == 0)
+        DebugLog($"Calculating targets for '{config.Name}' from {playerPos}");
+        
+        if (config.AllTilesValid)
         {
-            rangePattern = GetDefaultHexPattern();
+            var allPositions = stateManager.GetAllValidGridPositions();
+            foreach (var pos in allPositions)
+                validTargets.Add(pos - playerPos);
+        }
+        else if (config.UseRadiusRange)
+        {
+            foreach (var offset in GenerateRadiusPattern(config.Range))
+                validTargets.Add(offset);
+        }
+        else if (config.RangePattern != null && config.RangePattern.Count > 0)
+        {
+            foreach (var pattern in config.RangePattern)
+                validTargets.Add(pattern.ToVector2I());
+        }
+        else
+        {
+            foreach (var offset in GetDefaultHexPattern())
+                validTargets.Add(offset);
         }
         
-        foreach (var offset in rangePattern)
+        if (config.Whitelist != null)
         {
-            var adjustedOffset = AdjustOffsetForHexGrid(offset, playerPosition);
-            var targetCell = playerPosition + adjustedOffset;
+            foreach (var pattern in config.Whitelist)
+                foreach (var tile in ExpandPattern(pattern))
+                    validTargets.Add(tile);
+        }
+        
+        if (config.Blacklist != null)
+        {
+            foreach (var pattern in config.Blacklist)
+                foreach (var tile in ExpandPattern(pattern))
+                    validTargets.Remove(tile);
+        }
+        
+        var finalTargets = new List<Vector2I>();
+        foreach (var offset in validTargets)
+        {
+            var adjustedOffset = AdjustOffsetForHexGrid(offset, playerPos);
+            var targetCell = playerPos + adjustedOffset;
             
-            if (stateManager.IsValidGridPosition(targetCell) && CanTargetCell(targetCell, actionConfig.TargetType))
-            {
-                validTargets.Add(targetCell);
-            }
+            if (!stateManager.IsValidGridPosition(targetCell)) continue;
+            if (config.RequiresLineOfSight && !HasLineOfSight(playerPos, targetCell)) continue;
+            if (!PassesTargetFilters(targetCell, playerPos, config)) continue;
+            
+            finalTargets.Add(targetCell);
         }
         
-        // Add self-targeting if applicable
-        if (CanTargetSelf(actionConfig.TargetType))
+        if (CanTargetSelf(config.TargetType) && !config.ExcludeSelf)
         {
-            if (!validTargets.Contains(playerPosition))
-            {
-                validTargets.Add(playerPosition);
-            }
+            if (!finalTargets.Contains(playerPos))
+                finalTargets.Add(playerPos);
         }
         
-        return validTargets;
+        DebugLog($"Final valid targets: {finalTargets.Count}");
+        return finalTargets;
     }
     
-    private List<Vector2I> CalculateAffectedCells(Vector2I targetCell, ActionConfig actionConfig)
+    private List<Vector2I> ExpandPattern(CustomJsonSystem.TargetPattern pattern)
     {
-        var affectedCells = new List<Vector2I> { targetCell };
+        var tiles = new List<Vector2I>();
         
-        // Add AOE pattern cells
-        if (actionConfig.AoePattern != null && actionConfig.AoePattern.Count > 0)
+        if (pattern.Type == "coordinate")
         {
-            foreach (var aoeOffset in actionConfig.AoePattern)
+            tiles.Add(new Vector2I(pattern.X, pattern.Y));
+        }
+        else if (pattern.Type == "radius")
+        {
+            var centerOffset = new Vector2I(pattern.Center.X, pattern.Center.Y);
+            foreach (var tile in GenerateRadiusPattern(pattern.Radius))
+                tiles.Add(centerOffset + tile);
+            if (pattern.Radius > 0)
+                tiles.Add(centerOffset);
+        }
+        
+        return tiles;
+    }
+    
+    private bool PassesTargetFilters(Vector2I targetCell, Vector2I playerPos, ActionConfig config)
+    {
+        if (!CanTargetCell(targetCell, config.TargetType)) return false;
+        if (config.ExcludeSelf && targetCell == playerPos) return false;
+        if (config.ExcludeOccupied && stateManager.IsOccupiedCell(targetCell)) return false;
+        if (config.TargetEmptyCellsOnly && stateManager.IsOccupiedCell(targetCell)) return false;
+        if (config.TargetSelfOnly && targetCell != playerPos) return false;
+        return true;
+    }
+    
+    #endregion
+    
+    #region AOE Calculation
+    
+    public List<Vector2I> CalculateAffectedCells(Vector2I targetCell, ActionConfig config)
+    {
+        var affectedCells = new List<Vector2I>();
+        var playerPos = stateManager.GetPlayerPosition();
+        
+        if (!config.InverseAOE)
+            affectedCells.Add(targetCell);
+        
+        if (config.AoeType == "line")
+        {
+            var lineCells = CalculateLineAOE(playerPos, targetCell, config.AoeWidth, config.AoeOvershoot);
+            if (config.ExcludeOrigin)
+                lineCells.Remove(playerPos);
+            
+            foreach (var cell in lineCells)
+                if (stateManager.IsValidGridPosition(cell) && !affectedCells.Contains(cell))
+                    affectedCells.Add(cell);
+        }
+        else if (config.AoeRadius > 0)
+        {
+            foreach (var offset in GenerateRadiusPattern(config.AoeRadius))
             {
-                var aoeCell = targetCell + aoeOffset.ToVector2I();
+                var adjustedOffset = AdjustOffsetForHexGrid(offset, targetCell);
+                var aoeCell = targetCell + adjustedOffset;
                 if (stateManager.IsValidGridPosition(aoeCell) && !affectedCells.Contains(aoeCell))
-                {
                     affectedCells.Add(aoeCell);
-                }
+            }
+        }
+        else if (config.AoePattern != null && config.AoePattern.Count > 0)
+        {
+            foreach (var aoeOffset in config.AoePattern)
+            {
+                var adjustedOffset = AdjustOffsetForHexGrid(aoeOffset.ToVector2I(), targetCell);
+                var aoeCell = targetCell + adjustedOffset;
+                if (stateManager.IsValidGridPosition(aoeCell) && !affectedCells.Contains(aoeCell))
+                    affectedCells.Add(aoeCell);
             }
         }
         
+        DebugLog($"Total affected cells: {affectedCells.Count}");
         return affectedCells;
+    }
+    
+    private List<Vector2I> CalculateLineAOE(Vector2I origin, Vector2I target, int width, int overshoot = 0)
+    {
+        var cells = new List<Vector2I>();
+        Vector2I direction = GetHexDirection(origin, target);
+        
+        if (direction == Vector2I.Zero)
+        {
+            cells.Add(origin);
+            return cells;
+        }
+        
+        int totalSteps = 1 + overshoot;
+        Vector2I current = origin;
+        
+        for (int i = 0; i <= totalSteps; i++)
+        {
+            cells.Add(current);
+            current = current + AdjustOffsetForHexGrid(direction, current);
+        }
+        
+        return cells;
+    }
+    
+    private Vector2I GetHexDirection(Vector2I from, Vector2I to)
+    {
+        Vector2I offset = to - from;
+        var hexDirections = GetDefaultHexPattern();
+        
+        foreach (var dir in hexDirections)
+            if (dir == offset)
+                return dir;
+        
+        var cubeTo = OffsetToCube(to);
+        var cubeFrom = OffsetToCube(from);
+        var cubeDiff = new Vector3(cubeTo.X - cubeFrom.X, cubeTo.Y - cubeFrom.Y, cubeTo.Z - cubeFrom.Z);
+        
+        float absX = Mathf.Abs(cubeDiff.X);
+        float absY = Mathf.Abs(cubeDiff.Y);
+        float absZ = Mathf.Abs(cubeDiff.Z);
+        float maxVal = Mathf.Max(absX, Mathf.Max(absY, absZ));
+        
+        if (absX == maxVal)
+            return cubeDiff.X > 0 ? new Vector2I(1, 0) : new Vector2I(-1, 0);
+        else if (absY == maxVal)
+            return cubeDiff.Y > 0 ? new Vector2I(0, 1) : new Vector2I(0, -1);
+        else
+            return cubeDiff.Z > 0 ? new Vector2I(1, -1) : new Vector2I(-1, -1);
+    }
+    
+    #endregion
+    
+    #region Hex Grid Math
+    
+    private bool HasLineOfSight(Vector2I from, Vector2I to)
+    {
+        var line = HexLineDraw(from, to);
+        for (int i = 1; i < line.Count - 1; i++)
+            if (stateManager.IsOccupiedCell(line[i]))
+                return false;
+        return true;
+    }
+    
+    private List<Vector2I> HexLineDraw(Vector2I from, Vector2I to)
+    {
+        var line = new List<Vector2I>();
+        var cubeFrom = OffsetToCube(from);
+        var cubeTo = OffsetToCube(to);
+        int distance = HexCubeDistance(cubeFrom, cubeTo);
+        
+        if (distance == 0)
+        {
+            line.Add(from);
+            return line;
+        }
+        
+        for (int i = 0; i <= distance; i++)
+        {
+            float t = i / (float)distance;
+            var cubeLerp = CubeLerp(cubeFrom, cubeTo, t);
+            var cubeRounded = CubeRound(cubeLerp);
+            line.Add(CubeToOffset(cubeRounded));
+        }
+        
+        return line;
+    }
+    
+    private Vector3 OffsetToCube(Vector2I offset)
+    {
+        int col = offset.X;
+        int row = offset.Y;
+        int x = col;
+        int z = row - (col - (col & 1)) / 2;
+        int y = -x - z;
+        return new Vector3(x, y, z);
+    }
+    
+    private Vector2I CubeToOffset(Vector3 cube)
+    {
+        int col = (int)cube.X;
+        int row = (int)cube.Z + (col - (col & 1)) / 2;
+        return new Vector2I(col, row);
+    }
+    
+    private int HexCubeDistance(Vector3 a, Vector3 b)
+    {
+        return (int)((Mathf.Abs(a.X - b.X) + Mathf.Abs(a.Y - b.Y) + Mathf.Abs(a.Z - b.Z)) / 2);
+    }
+    
+    private Vector3 CubeLerp(Vector3 a, Vector3 b, float t)
+    {
+        return new Vector3(
+            Mathf.Lerp(a.X, b.X, t),
+            Mathf.Lerp(a.Y, b.Y, t),
+            Mathf.Lerp(a.Z, b.Z, t)
+        );
+    }
+    
+    private Vector3 CubeRound(Vector3 cube)
+    {
+        int rx = Mathf.RoundToInt(cube.X);
+        int ry = Mathf.RoundToInt(cube.Y);
+        int rz = Mathf.RoundToInt(cube.Z);
+        
+        float xDiff = Mathf.Abs(rx - cube.X);
+        float yDiff = Mathf.Abs(ry - cube.Y);
+        float zDiff = Mathf.Abs(rz - cube.Z);
+        
+        if (xDiff > yDiff && xDiff > zDiff)
+            rx = -ry - rz;
+        else if (yDiff > zDiff)
+            ry = -rx - rz;
+        else
+            rz = -rx - ry;
+        
+        return new Vector3(rx, ry, rz);
+    }
+    
+    private List<Vector2I> GenerateRadiusPattern(int radius)
+    {
+        var pattern = new List<Vector2I>();
+        int searchRange = radius + 2;
+        
+        for (int x = -searchRange; x <= searchRange; x++)
+        {
+            for (int y = -searchRange; y <= searchRange; y++)
+            {
+                if (x == 0 && y == 0) continue;
+                int hexDist = CalculateHexDistance(new Vector2I(0, 0), new Vector2I(x, y));
+                if (hexDist <= radius)
+                    pattern.Add(new Vector2I(x, y));
+            }
+        }
+        
+        return pattern;
+    }
+    
+    private int CalculateHexDistance(Vector2I from, Vector2I to)
+    {
+        int q1 = from.X;
+        int r1 = from.Y - (from.X - (from.X & 1)) / 2;
+        int q2 = to.X;
+        int r2 = to.Y - (to.X - (to.X & 1)) / 2;
+        int dq = q2 - q1;
+        int dr = r2 - r1;
+        return (Mathf.Abs(dq) + Mathf.Abs(dr) + Mathf.Abs(dq + dr)) / 2;
     }
     
     private List<Vector2I> GetDefaultHexPattern()
@@ -356,15 +523,14 @@ public class BattleActionHandler
             new(1, 0), new(-1, 0), new(0, 1), new(0, -1), new(1, -1), new(-1, -1)
         };
     }
-    
-    private Vector2I AdjustOffsetForHexGrid(Vector2I offset, Vector2I playerPosition)
+
+    private Vector2I AdjustOffsetForHexGrid(Vector2I offset, Vector2I position)
     {
-        // Adjust for hex grid offset columns (odd columns are shifted)
-        if (playerPosition.X % 2 != 0 && offset.X != 0)
-        {
+        if (position.X % 2 != 0 && offset.X != 0)
             return new Vector2I(offset.X, offset.Y + 1);
-        }
         return offset;
+        //Possibly redundant, this only fixes aoe previews. the valid tile calculations are correct.
+        //This breaks line AOE calculations, specifically it displaces the upper left and right hexes 1 step below.
     }
     
     private bool CanTargetCell(Vector2I cell, string targetType)
@@ -390,14 +556,20 @@ public class BattleActionHandler
     
     #region Public Access
     
-    public List<Vector2I> GetValidTargetsForCurrentAction()
-    {
-        return new List<Vector2I>(currentValidTargets);
-    }
-    
+    public List<Vector2I> GetValidTargetsForCurrentAction() => new List<Vector2I>(currentValidTargets);
     public string GetCurrentActionType() => currentActionType;
     public string GetSelectedActionOption() => selectedActionOption;
     public ActionConfig GetCurrentActionConfig() => currentActionConfig;
+    
+    #endregion
+    
+    #region Debug
+    
+    private void DebugLog(string message)
+    {
+        if (debugEnabled)
+            GD.Print($"[BattleAction] {message}");
+    }
     
     #endregion
 }

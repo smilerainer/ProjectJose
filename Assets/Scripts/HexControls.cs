@@ -2,6 +2,7 @@
 using Godot;
 using System.Linq;
 using System.Collections.Generic;
+using CustomJsonSystem;
 
 public partial class HexControls : Node2D
 {
@@ -29,11 +30,11 @@ public partial class HexControls : Node2D
     private bool interactionModeActive = false;
     private HashSet<Vector2I> validCells = new();
     private HashSet<Vector2I> adjacentCells = new();
-    private List<Vector2I> aoePattern = new();
-    private string targetType = "";
     private bool canTargetSelf = false;
     private bool justEntered = false;
     private Tween cameraTween;
+    private CustomJsonSystem.ActionConfig currentActionConfig;
+    private BattleActionHandler actionHandler;
     #endregion
 
     #region Properties
@@ -106,6 +107,13 @@ public partial class HexControls : Node2D
         SetActive(false);
         SetCameraFollow(false);
     }
+    public void SetActionConfig(ActionConfig config, BattleActionHandler handler)
+    {
+        currentActionConfig = config;
+        actionHandler = handler;
+        canTargetSelf = hexGrid?.CanTargetSelf(config.TargetType) ?? false;
+        if (enableDebugLogs) GD.Print($"[HexControls] Action config set: {config.Name}");
+    }
 
     public void StartUIOnlyMode(Vector2I focusPosition)
     {
@@ -123,14 +131,6 @@ public partial class HexControls : Node2D
             CalculateAdjacentCells();
         }
         if (enableDebugLogs) GD.Print($"[HexControls] Valid cells set: {cells.Count}");
-    }
-
-    public void SetTargetingInfo(string type, List<Vector2I> pattern)
-    {
-        targetType = type;
-        aoePattern = pattern;
-        canTargetSelf = hexGrid?.CanTargetSelf(type) ?? false;
-        if (enableDebugLogs) GD.Print($"[HexControls] Targeting: {type}, CanTargetSelf: {canTargetSelf}");
     }
 
     public void FocusOnPosition(Vector2I position)
@@ -234,7 +234,7 @@ public partial class HexControls : Node2D
         var playerPos = FindPlayerPosition();
         
         // Special case: cancel if moving to same position
-        if (cursorPosition == playerPos && targetType.ToLower() == "movement")
+        if (cursorPosition == playerPos && currentActionConfig?.TargetType.ToLower() == "movement")
         {
             if (justEntered)
             {
@@ -305,12 +305,13 @@ public partial class HexControls : Node2D
 
     private void ShowAoeIfNeeded()
     {
-        if (hexGrid == null || aoePattern.Count == 0) return;
+        if (hexGrid == null || currentActionConfig == null || actionHandler == null) return;
         
         if (IsValidTarget(cursorPosition))
         {
-            hexGrid.ShowAoePreview(cursorPosition, aoePattern);
-            // Redraw cursor on top of AOE
+            var affectedCells = actionHandler.CalculateAffectedCells(cursorPosition, currentActionConfig);
+            
+            hexGrid.ShowAoePreviewAbsolute(affectedCells);
             CallDeferred(nameof(RedrawCursorOnly));
         }
     }
@@ -318,7 +319,7 @@ public partial class HexControls : Node2D
     private void RedrawCursorOnly()
     {
         if (hexGrid == null) return;
-        
+
         // Only redraw the cursor without clearing AOE
         var cursorType = IsValidTarget(cursorPosition) ? CursorType.Valid : CursorType.Invalid;
         hexGrid.SetCursor(cursorPosition, cursorType, CellLayer.Cursor);

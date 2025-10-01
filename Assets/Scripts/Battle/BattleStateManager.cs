@@ -11,6 +11,9 @@ public class BattleStateManager
     private Dictionary<Vector2I, string> entityPositions = new();
     private HexGrid hexGrid;
     
+    // Track HP for each entity
+    private Dictionary<string, (float current, float max)> entityHP = new();
+    
     #endregion
     
     #region Battle Flow State
@@ -58,14 +61,16 @@ public class BattleStateManager
         hexGrid.SetCellOccupied(playerPosition, true);
         hexGrid.SetCellMetadata(playerPosition, "description", "Player Character");
         entityPositions[playerPosition] = "player";
+        entityHP["player"] = (100f, 100f);
         
         // Setup enemy
         hexGrid.SetTileWithCoords(enemyPosition, CellLayer.Entity, new Vector2I(1, 0));
         hexGrid.SetCellOccupied(enemyPosition, true);
         hexGrid.SetCellMetadata(enemyPosition, "description", "Enemy Warrior");
         entityPositions[enemyPosition] = "enemy";
+        entityHP["enemy"] = (80f, 80f);
         
-        GD.Print($"[BattleState] Entities placed - Player: {playerPosition}, Enemy: {enemyPosition}");
+        GD.Print($"[BattleState] Entities placed - Player: 100/100 HP, Enemy: 80/80 HP");
     }
     
     #endregion
@@ -108,19 +113,33 @@ public class BattleStateManager
         GD.Print($"[BattleState] Player moved to {playerPosition}");
     }
     
-    // Placeholder methods for future BattleLogic integration
     public void ApplyDamageToEntity(Vector2I position, float damage)
     {
-        // TODO: Integrate with BattleLogic Entity.TakeDamage()
         var entityType = GetEntityTypeAt(position);
-        GD.Print($"[BattleState] {entityType} at {position} takes {damage} damage");
+        if (!entityHP.ContainsKey(entityType)) return;
+        
+        var (current, max) = entityHP[entityType];
+        current = Mathf.Max(0, current - damage);
+        entityHP[entityType] = (current, max);
+        
+        GD.Print($"[BattleState] {entityType} at {position} takes {damage} damage -> {current}/{max} HP");
+        
+        if (current <= 0)
+        {
+            GD.Print($"[BattleState] {entityType} defeated!");
+        }
     }
     
     public void ApplyHealingToEntity(Vector2I position, float healing)
     {
-        // TODO: Integrate with BattleLogic Entity.Heal()
         var entityType = GetEntityTypeAt(position);
-        GD.Print($"[BattleState] {entityType} at {position} heals {healing} HP");
+        if (!entityHP.ContainsKey(entityType)) return;
+        
+        var (current, max) = entityHP[entityType];
+        current = Mathf.Min(max, current + healing);
+        entityHP[entityType] = (current, max);
+        
+        GD.Print($"[BattleState] {entityType} at {position} heals {healing} HP -> {current}/{max} HP");
     }
     
     public void ApplyStatusEffectToEntity(Vector2I position, string statusEffect)
@@ -145,8 +164,14 @@ public class BattleStateManager
     
     public bool CheckBattleEndConditions()
     {
-        // TODO: Integrate with BattleLogic BattleState.IsGameOver()
-        // For now, never end the battle
+        // Check if player is defeated
+        if (entityHP.ContainsKey("player") && entityHP["player"].current <= 0)
+            return true;
+        
+        // Check if all enemies are defeated
+        if (entityHP.ContainsKey("enemy") && entityHP["enemy"].current <= 0)
+            return true;
+        
         return false;
     }
     
@@ -159,6 +184,36 @@ public class BattleStateManager
     public bool IsValidGridPosition(Vector2I cell)
     {
         return hexGrid?.IsValidCell(cell) ?? false;
+    }
+    
+    public List<Vector2I> GetAllValidGridPositions()
+    {
+        var positions = new List<Vector2I>();
+        
+        if (hexGrid == null)
+            return positions;
+        
+        // Get grid dimensions from HexGrid
+        // Assuming HexGrid has a way to get its bounds
+        // If not, you may need to add GetGridWidth() and GetGridHeight() methods to HexGrid
+        
+        // For now, using a reasonable search range
+        // Adjust these values based on your actual grid size
+        int maxSearch = 20;
+        
+        for (int x = -maxSearch; x <= maxSearch; x++)
+        {
+            for (int y = -maxSearch; y <= maxSearch; y++)
+            {
+                var cell = new Vector2I(x, y);
+                if (hexGrid.IsValidCell(cell))
+                {
+                    positions.Add(cell);
+                }
+            }
+        }
+        
+        return positions;
     }
     
     #endregion

@@ -132,7 +132,7 @@ public partial class MenuControls : Container
     {
         if (buttonContainer == null)
         {
-            GD.PrintErr($"[MenuControls] Cannot add button - no container found in {Name}");
+            //GD.PrintErr($"[MenuControls] Cannot add button - no container found in {Name}");
             return null;
         }
         
@@ -143,7 +143,7 @@ public partial class MenuControls : Container
         buttonContainer.AddChild(button);
         DiscoverButtons();
         
-        GD.Print($"[MenuControls] Added button '{button.Name}' with text '{buttonText}' to {Name}");
+        //GD.Print($"[MenuControls] Added button '{button.Name}' with text '{buttonText}' to {Name}");
         return button;
     }
     
@@ -475,24 +475,24 @@ public partial class MenuControls : Container
     
     public void PrintDebugInfo()
     {
-        GD.Print($"[MenuControls] === Debug Info for {Name} ===");
-        GD.Print($"  Active: {isActive}");
-        GD.Print($"  Button Count: {buttons.Count}");
-        GD.Print($"  Current Index: {currentIndex}");
-        GD.Print($"  Current Button: {GetCurrentButtonText()}");
-        GD.Print($"  Wrap Navigation: {wrapNavigation}");
+        //GD.Print($"[MenuControls] === Debug Info for {Name} ===");
+        //GD.Print($"  Active: {isActive}");
+        //GD.Print($"  Button Count: {buttons.Count}");
+        //GD.Print($"  Current Index: {currentIndex}");
+        //GD.Print($"  Current Button: {GetCurrentButtonText()}");
+        //GD.Print($"  Wrap Navigation: {wrapNavigation}");
         
         if (buttons.Count > 0)
         {
-            GD.Print($"  Buttons:");
+            //GD.Print($"  Buttons:");
             for (int i = 0; i < buttons.Count; i++)
             {
                 var info = GetButtonInfo(i);
                 var marker = i == currentIndex ? " <-- CURRENT" : "";
-                GD.Print($"    [{i}] {info["text"]} (Name: {info["name"]}){marker}");
+                //GD.Print($"    [{i}] {info["text"]} (Name: {info["name"]}){marker}");
             }
         }
-        GD.Print($"[MenuControls] === End Debug Info ===");
+        //GD.Print($"[MenuControls] === End Debug Info ===");
     }
     
     #endregion

@@ -101,14 +101,12 @@ public partial class BattleManager : Node
     {
         actionHandler.ProcessSubmenuSelection(actionName);
         
-        // Start target selection if action config is valid
-        var actionConfig = configLoader.GetActionConfig(actionName);
+        // Pass ActionConfig to UI instead of static AOE pattern
+        var actionConfig = actionHandler.GetCurrentActionConfig();
         if (actionConfig != null)
         {
             var validTargets = actionHandler.GetValidTargetsForCurrentAction();
-            var aoePattern = actionConfig.AoePattern.Select(p => p.ToVector2I()).ToList();
-            
-            uiController.StartTargetSelection(validTargets, aoePattern, actionConfig.TargetType);
+            uiController.StartTargetSelection(validTargets, actionConfig);
         }
     }
     
@@ -136,10 +134,11 @@ public partial class BattleManager : Node
     public BattleConfigurationLoader GetConfigLoader() => configLoader;
     public TurnManager GetTurnManager() => turnManager;
     
+    
     #endregion
-    
+
     #region Helper Methods
-    
+
     private string[] GetAvailableActionsForType(string actionType)
     {
         return actionType switch

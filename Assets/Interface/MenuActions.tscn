@@ -37,6 +37,7 @@ patch_margin_bottom = 8
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI"]
 layout_mode = 2
+alignment = 1
 script = ExtResource("2_104n5")
 wrapNavigation = false
 
