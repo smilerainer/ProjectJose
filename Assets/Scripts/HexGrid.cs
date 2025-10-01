@@ -169,16 +169,6 @@ public partial class HexGrid : Node2D
         return (Mathf.Abs(cubeA.X - cubeB.X) + Mathf.Abs(cubeA.Y - cubeB.Y) + Mathf.Abs(cubeA.Z - cubeB.Z)) / 2;
     }
 
-    public Vector2I AdjustOffsetForHexGrid(Vector2I offset, Vector2I referencePosition)
-    {
-        // Hex grid coordinate adjustment for odd/even columns
-        if (referencePosition.X % 2 != 0 && offset.X != 0)
-        {
-            return new Vector2I(offset.X, offset.Y + 1);
-        }
-        return offset;
-    }
-
     private Vector2I[] GetDirectionsFor(Vector2I cell)
     {
         Vector2I[] evenColDirections = {
@@ -315,11 +305,7 @@ public partial class HexGrid : Node2D
 
         foreach (var offset in aoePattern)
         {
-            var adjustedOffset = AdjustOffsetForHexGrid(offset, targetCell);
-            var aoeCell = targetCell + adjustedOffset;
-
-            //Dont offset aoe's anymore
-            // var aoeCell = targetCell;
+            var aoeCell = targetCell + offset;
 
             if (IsValidCell(aoeCell))
             {
@@ -395,8 +381,6 @@ public partial class HexGrid : Node2D
         // This will be connected to battle system via signal
         DebugLog($"[HexGrid] Cell selected: {cell}");
     }
-    
-    // Add this method to HexGrid.cs in the Highlighting System region
 
     public void ShowAoePreviewAbsolute(List<Vector2I> absoluteCells)
     {

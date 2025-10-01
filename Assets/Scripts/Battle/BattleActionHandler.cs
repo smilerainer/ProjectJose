@@ -217,44 +217,85 @@ public class BattleActionHandler
         {
             var allPositions = stateManager.GetAllValidGridPositions();
             foreach (var pos in allPositions)
-                validTargets.Add(pos - playerPos);
+                validTargets.Add(pos);
         }
         else if (config.UseRadiusRange)
         {
-            foreach (var offset in GenerateRadiusPattern(config.Range))
-                validTargets.Add(offset);
+            // Use proper cube coordinate math for radius
+            var playerCube = OffsetToCube(playerPos);
+            for (int q = -config.Range; q <= config.Range; q++)
+            {
+                for (int r = -config.Range; r <= config.Range; r++)
+                {
+                    for (int s = -config.Range; s <= config.Range; s++)
+                    {
+                        if (q + r + s == 0)
+                        {
+                            int distance = (Mathf.Abs(q) + Mathf.Abs(r) + Mathf.Abs(s)) / 2;
+                            if (distance > 0 && distance <= config.Range)
+                            {
+                                var targetCube = new Vector3(playerCube.X + q, playerCube.Y + r, playerCube.Z + s);
+                                var targetCell = CubeToOffset(targetCube);
+                                validTargets.Add(targetCell);
+                            }
+                        }
+                    }
+                }
+            }
         }
         else if (config.RangePattern != null && config.RangePattern.Count > 0)
         {
+            // Explicit patterns - use cube coordinate conversion for odd/even column compatibility
+            var playerCube = OffsetToCube(playerPos);
+            
             foreach (var pattern in config.RangePattern)
-                validTargets.Add(pattern.ToVector2I());
+            {
+                var offset = pattern.ToVector2I();
+                
+                // Convert offset to cube, add to player cube, convert back
+                var offsetCube = OffsetToCube(offset);
+                var targetCube = new Vector3(
+                    playerCube.X + offsetCube.X,
+                    playerCube.Y + offsetCube.Y,
+                    playerCube.Z + offsetCube.Z
+                );
+                var targetCell = CubeToOffset(targetCube);
+                validTargets.Add(targetCell);
+            }
         }
         else
         {
+            // Default hex pattern - direct neighbors
             foreach (var offset in GetDefaultHexPattern())
-                validTargets.Add(offset);
+            {
+                var targetCell = playerPos + offset;
+                validTargets.Add(targetCell);
+            }
         }
         
         if (config.Whitelist != null)
         {
             foreach (var pattern in config.Whitelist)
-                foreach (var tile in ExpandPattern(pattern))
-                    validTargets.Add(tile);
+                foreach (var offset in ExpandPattern(pattern))
+                {
+                    var targetCell = playerPos + offset;
+                    validTargets.Add(targetCell);
+                }
         }
         
         if (config.Blacklist != null)
         {
             foreach (var pattern in config.Blacklist)
-                foreach (var tile in ExpandPattern(pattern))
-                    validTargets.Remove(tile);
+                foreach (var offset in ExpandPattern(pattern))
+                {
+                    var targetCell = playerPos + offset;
+                    validTargets.Remove(targetCell);
+                }
         }
         
         var finalTargets = new List<Vector2I>();
-        foreach (var offset in validTargets)
+        foreach (var targetCell in validTargets)
         {
-            var adjustedOffset = AdjustOffsetForHexGrid(offset, playerPos);
-            var targetCell = playerPos + adjustedOffset;
-            
             if (!stateManager.IsValidGridPosition(targetCell)) continue;
             if (config.RequiresLineOfSight && !HasLineOfSight(playerPos, targetCell)) continue;
             if (!PassesTargetFilters(targetCell, playerPos, config)) continue;
@@ -272,6 +313,9 @@ public class BattleActionHandler
         return finalTargets;
     }
     
+    // Removed - no longer needed
+    // private Vector2I ApplyHexOffset(Vector2I origin, Vector2I offset)
+    
     private List<Vector2I> ExpandPattern(CustomJsonSystem.TargetPattern pattern)
     {
         var tiles = new List<Vector2I>();
@@ -283,8 +327,30 @@ public class BattleActionHandler
         else if (pattern.Type == "radius")
         {
             var centerOffset = new Vector2I(pattern.Center.X, pattern.Center.Y);
-            foreach (var tile in GenerateRadiusPattern(pattern.Radius))
-                tiles.Add(centerOffset + tile);
+            
+            // Generate radius pattern in cube coordinates from center
+            for (int q = -pattern.Radius; q <= pattern.Radius; q++)
+            {
+                for (int r = -pattern.Radius; r <= pattern.Radius; r++)
+                {
+                    for (int s = -pattern.Radius; s <= pattern.Radius; s++)
+                    {
+                        if (q + r + s == 0)
+                        {
+                            int distance = (Mathf.Abs(q) + Mathf.Abs(r) + Mathf.Abs(s)) / 2;
+                            if (distance > 0 && distance <= pattern.Radius)
+                            {
+                                // Convert to offset
+                                int col = q;
+                                int row = s + (q - (q & 1)) / 2;
+                                tiles.Add(centerOffset + new Vector2I(col, row));
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Include center if radius > 0
             if (pattern.Radius > 0)
                 tiles.Add(centerOffset);
         }
@@ -326,20 +392,47 @@ public class BattleActionHandler
         }
         else if (config.AoeRadius > 0)
         {
-            foreach (var offset in GenerateRadiusPattern(config.AoeRadius))
+            // Use exact same cube coordinate approach as valid targets
+            var targetCube = OffsetToCube(targetCell);
+            for (int q = -config.AoeRadius; q <= config.AoeRadius; q++)
             {
-                var adjustedOffset = AdjustOffsetForHexGrid(offset, targetCell);
-                var aoeCell = targetCell + adjustedOffset;
-                if (stateManager.IsValidGridPosition(aoeCell) && !affectedCells.Contains(aoeCell))
-                    affectedCells.Add(aoeCell);
+                for (int r = -config.AoeRadius; r <= config.AoeRadius; r++)
+                {
+                    for (int s = -config.AoeRadius; s <= config.AoeRadius; s++)
+                    {
+                        if (q + r + s == 0)
+                        {
+                            int distance = (Mathf.Abs(q) + Mathf.Abs(r) + Mathf.Abs(s)) / 2;
+                            if (distance > 0 && distance <= config.AoeRadius)
+                            {
+                                var aoeCube = new Vector3(targetCube.X + q, targetCube.Y + r, targetCube.Z + s);
+                                var aoeCell = CubeToOffset(aoeCube);
+                                if (stateManager.IsValidGridPosition(aoeCell) && !affectedCells.Contains(aoeCell))
+                                    affectedCells.Add(aoeCell);
+                            }
+                        }
+                    }
+                }
             }
         }
         else if (config.AoePattern != null && config.AoePattern.Count > 0)
         {
+            // Explicit AOE patterns - convert each offset using cube coordinates
+            var targetCube = OffsetToCube(targetCell);
+            
             foreach (var aoeOffset in config.AoePattern)
             {
-                var adjustedOffset = AdjustOffsetForHexGrid(aoeOffset.ToVector2I(), targetCell);
-                var aoeCell = targetCell + adjustedOffset;
+                var offset = aoeOffset.ToVector2I();
+                
+                // Convert offset to cube, add to target cube, convert back
+                var offsetCube = OffsetToCube(offset);
+                var aoeCube = new Vector3(
+                    targetCube.X + offsetCube.X,
+                    targetCube.Y + offsetCube.Y,
+                    targetCube.Z + offsetCube.Z
+                );
+                var aoeCell = CubeToOffset(aoeCube);
+                
                 if (stateManager.IsValidGridPosition(aoeCell) && !affectedCells.Contains(aoeCell))
                     affectedCells.Add(aoeCell);
             }
@@ -352,21 +445,58 @@ public class BattleActionHandler
     private List<Vector2I> CalculateLineAOE(Vector2I origin, Vector2I target, int width, int overshoot = 0)
     {
         var cells = new List<Vector2I>();
-        Vector2I direction = GetHexDirection(origin, target);
         
-        if (direction == Vector2I.Zero)
+        // Get the line from origin to target using proper hex line drawing
+        var linePath = HexLineDraw(origin, target);
+        
+        if (linePath.Count <= 1)
         {
             cells.Add(origin);
             return cells;
         }
         
-        int totalSteps = 1 + overshoot;
-        Vector2I current = origin;
+        // Get direction in cube space for accurate extension
+        var originCube = OffsetToCube(origin);
+        var targetCube = OffsetToCube(target);
+        var dirCube = new Vector3(
+            targetCube.X - originCube.X,
+            targetCube.Y - originCube.Y,
+            targetCube.Z - originCube.Z
+        );
         
-        for (int i = 0; i <= totalSteps; i++)
+        // Normalize direction in cube space
+        float maxComponent = Mathf.Max(Mathf.Abs(dirCube.X), Mathf.Max(Mathf.Abs(dirCube.Y), Mathf.Abs(dirCube.Z)));
+        if (maxComponent > 0)
         {
-            cells.Add(current);
-            current = current + AdjustOffsetForHexGrid(direction, current);
+            dirCube = new Vector3(
+                dirCube.X / maxComponent,
+                dirCube.Y / maxComponent,
+                dirCube.Z / maxComponent
+            );
+        }
+        
+        // Add all cells in the line path
+        foreach (var cell in linePath)
+        {
+            cells.Add(cell);
+        }
+        
+        // Extend beyond target with overshoot
+        if (overshoot > 0)
+        {
+            var currentCube = targetCube;
+            for (int i = 0; i < overshoot; i++)
+            {
+                currentCube = new Vector3(
+                    currentCube.X + dirCube.X,
+                    currentCube.Y + dirCube.Y,
+                    currentCube.Z + dirCube.Z
+                );
+                var rounded = CubeRound(currentCube);
+                var cell = CubeToOffset(rounded);
+                if (!cells.Contains(cell))
+                    cells.Add(cell);
+            }
         }
         
         return cells;
@@ -489,16 +619,26 @@ public class BattleActionHandler
     private List<Vector2I> GenerateRadiusPattern(int radius)
     {
         var pattern = new List<Vector2I>();
-        int searchRange = radius + 2;
         
-        for (int x = -searchRange; x <= searchRange; x++)
+        // Use cube coordinates for accurate hex distance
+        for (int q = -radius; q <= radius; q++)
         {
-            for (int y = -searchRange; y <= searchRange; y++)
+            for (int r = -radius; r <= radius; r++)
             {
-                if (x == 0 && y == 0) continue;
-                int hexDist = CalculateHexDistance(new Vector2I(0, 0), new Vector2I(x, y));
-                if (hexDist <= radius)
-                    pattern.Add(new Vector2I(x, y));
+                for (int s = -radius; s <= radius; s++)
+                {
+                    if (q + r + s == 0)
+                    {
+                        int cubeDistance = (Mathf.Abs(q) + Mathf.Abs(r) + Mathf.Abs(s)) / 2;
+                        if (cubeDistance > 0 && cubeDistance <= radius)
+                        {
+                            // Convert cube to offset coordinates
+                            int col = q;
+                            int row = s + (q - (q & 1)) / 2;
+                            pattern.Add(new Vector2I(col, row));
+                        }
+                    }
+                }
             }
         }
         
@@ -522,15 +662,6 @@ public class BattleActionHandler
         {
             new(1, 0), new(-1, 0), new(0, 1), new(0, -1), new(1, -1), new(-1, -1)
         };
-    }
-
-    private Vector2I AdjustOffsetForHexGrid(Vector2I offset, Vector2I position)
-    {
-        if (position.X % 2 != 0 && offset.X != 0)
-            return new Vector2I(offset.X, offset.Y + 1);
-        return offset;
-        //Possibly redundant, this only fixes aoe previews. the valid tile calculations are correct.
-        //This breaks line AOE calculations, specifically it displaces the upper left and right hexes 1 step below.
     }
     
     private bool CanTargetCell(Vector2I cell, string targetType)
