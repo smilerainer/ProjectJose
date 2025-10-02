@@ -691,11 +691,219 @@ public class BattleActionHandler
     public string GetCurrentActionType() => currentActionType;
     public string GetSelectedActionOption() => selectedActionOption;
     public ActionConfig GetCurrentActionConfig() => currentActionConfig;
+
+    #endregion
     
+    #region NPC Support Methods
+
+    /// <summary>
+    /// Calculate valid targets from an arbitrary position (not just player position)
+    /// Used by NPC AI to determine where they can act
+    /// </summary>
+    public List<Vector2I> CalculateValidTargetsFromPosition(Vector2I sourcePosition, ActionConfig config)
+    {
+        var validTargets = new HashSet<Vector2I>();
+        
+        DebugLog($"Calculating targets for '{config.Name}' from {sourcePosition}");
+        
+        if (config.AllTilesValid)
+        {
+            var allPositions = stateManager.GetAllValidGridPositions();
+            foreach (var pos in allPositions)
+                validTargets.Add(pos);
+        }
+        else if (config.UseRadiusRange)
+        {
+            var sourceCube = OffsetToCube(sourcePosition);
+            for (int q = -config.Range; q <= config.Range; q++)
+            {
+                for (int r = -config.Range; r <= config.Range; r++)
+                {
+                    for (int s = -config.Range; s <= config.Range; s++)
+                    {
+                        if (q + r + s == 0)
+                        {
+                            int distance = (Mathf.Abs(q) + Mathf.Abs(r) + Mathf.Abs(s)) / 2;
+                            if (distance > 0 && distance <= config.Range)
+                            {
+                                var targetCube = new Vector3(sourceCube.X + q, sourceCube.Y + r, sourceCube.Z + s);
+                                var targetCell = CubeToOffset(targetCube);
+                                validTargets.Add(targetCell);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else if (config.RangePattern != null && config.RangePattern.Count > 0)
+        {
+            var sourceCube = OffsetToCube(sourcePosition);
+            
+            foreach (var pattern in config.RangePattern)
+            {
+                var offset = pattern.ToVector2I();
+                var offsetCube = OffsetToCube(offset);
+                var targetCube = new Vector3(
+                    sourceCube.X + offsetCube.X,
+                    sourceCube.Y + offsetCube.Y,
+                    sourceCube.Z + offsetCube.Z
+                );
+                var targetCell = CubeToOffset(targetCube);
+                validTargets.Add(targetCell);
+            }
+        }
+        else
+        {
+            foreach (var offset in GetDefaultHexPattern())
+            {
+                var targetCell = sourcePosition + offset;
+                validTargets.Add(targetCell);
+            }
+        }
+        
+        if (config.Whitelist != null)
+        {
+            foreach (var pattern in config.Whitelist)
+                foreach (var offset in ExpandPattern(pattern))
+                {
+                    var targetCell = sourcePosition + offset;
+                    validTargets.Add(targetCell);
+                }
+        }
+        
+        if (config.Blacklist != null)
+        {
+            foreach (var pattern in config.Blacklist)
+                foreach (var offset in ExpandPattern(pattern))
+                {
+                    var targetCell = sourcePosition + offset;
+                    validTargets.Remove(targetCell);
+                }
+        }
+        
+        var finalTargets = new List<Vector2I>();
+        foreach (var targetCell in validTargets)
+        {
+            if (!stateManager.IsValidGridPosition(targetCell)) continue;
+            if (config.RequiresLineOfSight && !HasLineOfSight(sourcePosition, targetCell)) continue;
+            if (!PassesTargetFiltersFromPosition(targetCell, sourcePosition, config)) continue;
+            
+            finalTargets.Add(targetCell);
+        }
+        
+        if (CanTargetSelf(config.TargetType) && !config.ExcludeSelf)
+        {
+            if (!finalTargets.Contains(sourcePosition))
+                finalTargets.Add(sourcePosition);
+        }
+        
+        DebugLog($"Final valid targets from {sourcePosition}: {finalTargets.Count}");
+        return finalTargets;
+    }
+
+    /// <summary>
+    /// Calculate AOE affected cells from arbitrary source and target
+    /// </summary>
+    public List<Vector2I> CalculateAffectedCellsFromPosition(
+        Vector2I sourcePosition,
+        Vector2I targetCell,
+        ActionConfig config)
+    {
+        var affectedCells = new List<Vector2I>();
+        
+        if (!config.InverseAOE)
+            affectedCells.Add(targetCell);
+        
+        if (config.AoeType == "line")
+        {
+            var lineCells = CalculateLineAOE(sourcePosition, targetCell, config.AoeWidth, config.AoeOvershoot);
+            if (config.ExcludeOrigin)
+                lineCells.Remove(sourcePosition);
+            
+            foreach (var cell in lineCells)
+                if (stateManager.IsValidGridPosition(cell) && !affectedCells.Contains(cell))
+                    affectedCells.Add(cell);
+        }
+        else if (config.AoeRadius > 0)
+        {
+            var targetCube = OffsetToCube(targetCell);
+            for (int q = -config.AoeRadius; q <= config.AoeRadius; q++)
+            {
+                for (int r = -config.AoeRadius; r <= config.AoeRadius; r++)
+                {
+                    for (int s = -config.AoeRadius; s <= config.AoeRadius; s++)
+                    {
+                        if (q + r + s == 0)
+                        {
+                            int distance = (Mathf.Abs(q) + Mathf.Abs(r) + Mathf.Abs(s)) / 2;
+                            if (distance > 0 && distance <= config.AoeRadius)
+                            {
+                                var aoeCube = new Vector3(targetCube.X + q, targetCube.Y + r, targetCube.Z + s);
+                                var aoeCell = CubeToOffset(aoeCube);
+                                if (stateManager.IsValidGridPosition(aoeCell) && !affectedCells.Contains(aoeCell))
+                                    affectedCells.Add(aoeCell);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else if (config.AoePattern != null && config.AoePattern.Count > 0)
+        {
+            var targetCube = OffsetToCube(targetCell);
+            
+            foreach (var aoeOffset in config.AoePattern)
+            {
+                var offset = aoeOffset.ToVector2I();
+                var offsetCube = OffsetToCube(offset);
+                var aoeCube = new Vector3(
+                    targetCube.X + offsetCube.X,
+                    targetCube.Y + offsetCube.Y,
+                    targetCube.Z + offsetCube.Z
+                );
+                var aoeCell = CubeToOffset(aoeCube);
+                
+                if (stateManager.IsValidGridPosition(aoeCell) && !affectedCells.Contains(aoeCell))
+                    affectedCells.Add(aoeCell);
+            }
+        }
+        
+        DebugLog($"Total affected cells from {sourcePosition} targeting {targetCell}: {affectedCells.Count}");
+        return affectedCells;
+    }
+
+    private bool PassesTargetFiltersFromPosition(Vector2I targetCell, Vector2I sourcePosition, ActionConfig config)
+    {
+        if (!CanTargetCellFromPosition(targetCell, sourcePosition, config.TargetType)) return false;
+        if (config.ExcludeSelf && targetCell == sourcePosition) return false;
+        if (config.ExcludeOccupied && stateManager.IsOccupiedCell(targetCell)) return false;
+        if (config.TargetEmptyCellsOnly && stateManager.IsOccupiedCell(targetCell)) return false;
+        if (config.TargetSelfOnly && targetCell != sourcePosition) return false;
+        return true;
+    }
+
+    private bool CanTargetCellFromPosition(Vector2I cell, Vector2I sourcePosition, string targetType)
+    {
+        var entity = stateManager.GetEntityAt(cell);
+        var sourceEntity = stateManager.GetEntityAt(sourcePosition);
+        
+        if (sourceEntity == null) return true; // Fallback for undefined source
+        
+        return targetType.ToLower() switch
+        {
+            "self" => cell == sourcePosition,
+            "ally" => entity != null && sourceEntity.IsAllyOf(entity),
+            "enemy" => entity != null && sourceEntity.IsEnemyOf(entity),
+            "movement" => !stateManager.IsOccupiedCell(cell),
+            "area" or "any" => true,
+            _ => true
+        };
+    }
+
     #endregion
     
     #region Debug
-    
+
     private void DebugLog(string message)
     {
         if (debugEnabled)

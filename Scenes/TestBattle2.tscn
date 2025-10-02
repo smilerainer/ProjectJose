@@ -11,14 +11,15 @@
 position = Vector2(1, -2)
 
 [node name="HexGrid" parent="." instance=ExtResource("2_n21b5")]
-position = Vector2(159, 92)
+position = Vector2(141, 70)
+enableDebugLogs = false
 
 [node name="CentralInputManager" type="Node2D" parent="." node_paths=PackedStringArray("dynamicMenuRoot")]
 position = Vector2(168, -70)
 scale = Vector2(2.94759, 1.28409)
 script = ExtResource("2_kei0r")
 cursorTexture = ExtResource("3_ad07i")
-uiCursorOffset = Vector2(20, 0)
+uiCursorOffset = Vector2(15, 0)
 dynamicMenuRoot = NodePath("../UI/DynamicMenu")
 
 [node name="BattleManager" type="Node2D" parent="."]

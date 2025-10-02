@@ -43,7 +43,7 @@ public class BattleUIController
         menuControls = FindMenuControlsInTree(battleManager.GetTree().CurrentScene);
         inputManager = FindInputManagerInTree(battleManager.GetTree().CurrentScene);
         
-        GD.Print($"[BattleUI] UI Components found - HexGrid: {hexGrid != null}, MenuControls: {menuControls != null}, InputManager: {inputManager != null}");
+        //GD.Print($"[BattleUI] UI Components found - HexGrid: {hexGrid != null}, MenuControls: {menuControls != null}, InputManager: {inputManager != null}");
     }
     
     private void ConnectSignals()
@@ -58,7 +58,7 @@ public class BattleUIController
         if (inputManager != null)
             inputManager.DynamicMenuSelection += OnDynamicMenuSelection;
             
-        GD.Print("[BattleUI] Signals connected successfully");
+        //GD.Print("[BattleUI] Signals connected successfully");
     }
     
     public void SetupUI()
@@ -66,7 +66,7 @@ public class BattleUIController
         if (hexControls != null)
         {
             hexControls.StartUIOnlyMode(new Vector2I(0, 0));
-            GD.Print("[BattleUI] UI setup completed");
+            //GD.Print("[BattleUI] UI setup completed");
         }
     }
     
@@ -85,7 +85,7 @@ public class BattleUIController
             EnsureMenuFocusDelayed();
         }
         
-        GD.Print("[BattleUI] Main menu shown");
+        //GD.Print("[BattleUI] Main menu shown");
     }
     
     public void HideMainMenu()
@@ -96,7 +96,7 @@ public class BattleUIController
             menuControls.ReleaseFocus();
         }
         
-        GD.Print("[BattleUI] Main menu hidden");
+        //GD.Print("[BattleUI] Main menu hidden");
     }
     
     public void ShowSubmenu(string[] options)
@@ -111,7 +111,7 @@ public class BattleUIController
             ConnectToDynamicMenuDelayed();
         }
         
-        GD.Print($"[BattleUI] Submenu shown with {options.Length} options");
+        //GD.Print($"[BattleUI] Submenu shown with {options.Length} options");
     }
     
     public void HideSubmenu()
@@ -126,7 +126,7 @@ public class BattleUIController
             }
             
             isInSubmenu = false;
-            GD.Print("[BattleUI] Submenu hidden");
+            //GD.Print("[BattleUI] Submenu hidden");
         }
     }
     
@@ -163,7 +163,7 @@ public class BattleUIController
             hexControls.EnterInteractionMode();
         }
         
-        GD.Print($"[BattleUI] Target selection started - {validTargets.Count} valid targets, TargetType: {actionConfig.TargetType}");
+        //GD.Print($"[BattleUI] Target selection started - {validTargets.Count} valid targets, TargetType: {actionConfig.TargetType}");
     }
 
     
@@ -186,7 +186,7 @@ public class BattleUIController
             hexControls.SetActive(false);
         }
         
-        GD.Print("[BattleUI] Target selection ended");
+        //GD.Print("[BattleUI] Target selection ended");
     }
     
     #endregion
@@ -203,17 +203,17 @@ public class BattleUIController
             {
                 dynamicMenu.ButtonActivated -= OnDynamicMenuButtonPressed;
                 dynamicMenu.ButtonActivated += OnDynamicMenuButtonPressed;
-                GD.Print("[BattleUI] Connected to dynamic menu successfully");
+                //GD.Print("[BattleUI] Connected to dynamic menu successfully");
             }
             catch (System.Exception e)
             {
-                GD.PrintErr($"[BattleUI] Error connecting to dynamic menu: {e.Message}");
+                //GD.PrintErr($"[BattleUI] Error connecting to dynamic menu: {e.Message}");
                 ConnectToDynamicMenuDelayed();
             }
         }
         else
         {
-            GD.PrintErr("[BattleUI] Failed to find dynamic menu - retrying...");
+            //GD.PrintErr("[BattleUI] Failed to find dynamic menu - retrying...");
             ConnectToDynamicMenuDelayed();
         }
     }
@@ -227,11 +227,11 @@ public class BattleUIController
             try
             {
                 dynamicMenu.ButtonActivated -= OnDynamicMenuButtonPressed;
-                GD.Print("[BattleUI] Disconnected from dynamic menu");
+                //GD.Print("[BattleUI] Disconnected from dynamic menu");
             }
             catch (System.Exception e)
             {
-                GD.PrintErr($"[BattleUI] Error disconnecting from dynamic menu: {e.Message}");
+                //GD.PrintErr($"[BattleUI] Error disconnecting from dynamic menu: {e.Message}");
             }
         }
     }
@@ -308,7 +308,7 @@ public class BattleUIController
     {
         string buttonText = button.Name.ToString().ToLower();
         
-        GD.Print($"[BattleUI] Main menu button pressed: {buttonText}");
+        //GD.Print($"[BattleUI] Main menu button pressed: {buttonText}");
         
         if (buttonText.Contains("move"))
             battleManager.OnActionRequested("move", "");
@@ -325,7 +325,7 @@ public class BattleUIController
         if (isInSubmenu)
         {
             string buttonText = GetButtonText(button);
-            GD.Print($"[BattleUI] Dynamic menu selection: {buttonText}");
+            //GD.Print($"[BattleUI] Dynamic menu selection: {buttonText}");
             battleManager.OnSubmenuSelection(buttonText);
         }
     }
@@ -334,7 +334,7 @@ public class BattleUIController
     {
         if (isInSubmenu)
         {
-            GD.Print($"[BattleUI] Dynamic menu selection via input manager: {buttonText}");
+            //GD.Print($"[BattleUI] Dynamic menu selection via input manager: {buttonText}");
             battleManager.OnSubmenuSelection(buttonText);
         }
     }
@@ -343,14 +343,14 @@ public class BattleUIController
     {
         if (targetSelectionActive)
         {
-            GD.Print($"[BattleUI] Cell selected for targeting: {cell}");
+            //GD.Print($"[BattleUI] Cell selected for targeting: {cell}");
             battleManager.OnTargetSelected(cell);
         }
     }
     
     private void OnInteractionCancelled()
     {
-        GD.Print("[BattleUI] Target selection cancelled");
+        //GD.Print("[BattleUI] Target selection cancelled");
         battleManager.OnActionCancelled();
     }
     

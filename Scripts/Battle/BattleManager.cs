@@ -13,6 +13,7 @@ public partial class BattleManager : Node
     private BattleActionHandler actionHandler;
     private BattleConfigurationLoader configLoader;
     private TurnManager turnManager;
+    private NPCBehaviorManager npcBehaviorManager;
     
     #endregion
     
@@ -53,6 +54,7 @@ public partial class BattleManager : Node
         uiController = new BattleUIController();
         actionHandler = new BattleActionHandler();
         turnManager = new TurnManager();
+        npcBehaviorManager = new NPCBehaviorManager();
         
         // Setup dependencies between components
         SetupComponentDependencies();
@@ -65,6 +67,12 @@ public partial class BattleManager : Node
         actionHandler.Initialize(stateManager, configLoader);
         turnManager.Initialize(stateManager, uiController);
         stateManager.Initialize(this);
+        
+        // Initialize NPCBehaviorManager BEFORE connecting it to TurnManager
+        npcBehaviorManager.Initialize(stateManager, configLoader, actionHandler);  // ← Move this up
+        
+        // Connect NPC manager to turn manager (AFTER initialization)
+        turnManager.SetNPCBehaviorManager(npcBehaviorManager);
     }
     
     private void SetupBattle()

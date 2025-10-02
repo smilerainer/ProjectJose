@@ -1,231 +1,282 @@
-// TurnManager.cs - Manages turn flow and game state
+// TurnManager.cs - Manages turn flow with initiative-based turn order
 using Godot;
+using System.Collections.Generic;
+using System.Linq;
 
 public class TurnManager
 {
     #region Dependencies
-    
+
     private BattleStateManager stateManager;
     private BattleUIController uiController;
-    
+    private NPCBehaviorManager npcBehaviorManager;
+
     #endregion
-    
+
     #region Turn State
-    
+
     private bool battleActive = false;
     private int currentRound = 0;
-    
+    private List<Entity> turnOrder = new();
+    private int currentTurnIndex = 0;
+
     #endregion
-    
+
     #region Initialization
-    
+
     public void Initialize(BattleStateManager stateManager, BattleUIController uiController)
     {
         this.stateManager = stateManager;
         this.uiController = uiController;
-        
+
         GD.Print("[TurnManager] Turn manager initialized");
     }
-    
+
+    public void SetNPCBehaviorManager(NPCBehaviorManager manager)
+    {
+        this.npcBehaviorManager = manager;
+        GD.Print("[TurnManager] NPC behavior manager connected");
+    }
+
     #endregion
-    
+
     #region Battle Flow
-    
+
     public void StartBattle()
     {
         battleActive = true;
         currentRound = 1;
         stateManager.SetCurrentPhase(BattleStateManager.BattlePhase.PlayerTurn);
-        
+
         GD.Print("[TurnManager] Battle started");
-        
-        // Start the first player turn after a brief delay
-        StartPlayerTurn();
+
+        StartNextRound();
     }
-    
-    public void StartPlayerTurn()
+
+    private void StartNextRound()
+    {
+        currentRound++;
+        currentTurnIndex = 0;
+
+        // Calculate turn order based on initiative
+        turnOrder = CalculateTurnOrder();
+
+        GD.Print($"[TurnManager] === Round {currentRound} Started ===");
+        GD.Print($"[TurnManager] Turn order ({turnOrder.Count} entities):");
+        for (int i = 0; i < turnOrder.Count; i++)
+        {
+            GD.Print($"  {i + 1}. {turnOrder[i].Name} (Initiative: {turnOrder[i].Initiative})");
+        }
+
+        ProcessNextTurn();
+    }
+
+    private List<Entity> CalculateTurnOrder()
+    {
+        return stateManager.GetAliveEntities()
+            .Where(e => e.CanAct)
+            .OrderByDescending(e => e.Initiative)
+            .ThenByDescending(e => e.Speed)
+            .ToList();
+    }
+
+    private void ProcessNextTurn()
+    {
+        if (currentTurnIndex >= turnOrder.Count)
+        {
+            EndRound();
+            return;
+        }
+
+        var currentEntity = turnOrder[currentTurnIndex];
+
+        if (!currentEntity.IsAlive || !currentEntity.CanAct)
+        {
+            GD.Print($"[TurnManager] {currentEntity.Name} skips turn (not alive or cannot act)");
+            currentTurnIndex++;
+            ProcessNextTurn();
+            return;
+        }
+
+        GD.Print($"[TurnManager] --- {currentEntity.Name}'s turn ---");
+
+        if (currentEntity.Type == EntityType.Player)
+        {
+            StartPlayerTurn();
+        }
+        else
+        {
+            StartNPCTurn(currentEntity);
+        }
+    }
+
+    private void StartPlayerTurn()
     {
         stateManager.SetCurrentPhase(BattleStateManager.BattlePhase.ActionSelection);
         uiController.ShowMainMenu();
-        
+
         GD.Print($"[TurnManager] Player turn {currentRound} started");
     }
-    
+
+    private void StartNPCTurn(Entity entity)
+    {
+        stateManager.SetCurrentPhase(BattleStateManager.BattlePhase.EnemyTurn);
+        
+        GD.Print($"[TurnManager] {entity.Name} ({entity.Type}) turn started");
+        GD.Print($"[TurnManager DEBUG] npcBehaviorManager is null: {npcBehaviorManager == null}"); // ← Add this
+        
+        if (npcBehaviorManager != null)
+        {
+            var decision = npcBehaviorManager.GetDecisionForEntity(entity);
+            npcBehaviorManager.ExecuteDecision(entity, decision);
+        }
+        else
+        {
+            GD.PrintErr("[TurnManager] NPC behavior manager not initialized!");
+        }
+        
+        EndCurrentTurn();
+    }
+
     public void EndPlayerTurn()
     {
         stateManager.SetCurrentPhase(BattleStateManager.BattlePhase.TurnEnd);
         uiController.HideMainMenu();
-        
-        GD.Print($"[TurnManager] Player turn {currentRound} ended");
-        
-        // Process turn end effects
-        ProcessPlayerTurnEnd();
-        
-        // Move to enemy turn
-        StartEnemyTurn();
+
+        GD.Print($"[TurnManager] Player turn ended");
+
+        EndCurrentTurn();
     }
-    
-    public void StartEnemyTurn()
+
+    private void EndCurrentTurn()
     {
-        stateManager.SetCurrentPhase(BattleStateManager.BattlePhase.EnemyTurn);
-        
-        GD.Print("[TurnManager] Enemy turn started");
-        
-        // Process enemy actions
-        ProcessEnemyActions();
-        
-        // End enemy turn
-        EndEnemyTurn();
-    }
-    
-    public void EndEnemyTurn()
-    {
-        GD.Print("[TurnManager] Enemy turn ended");
-        
-        // Process enemy turn end effects
-        ProcessEnemyTurnEnd();
-        
-        // Check for battle end conditions
+        if (currentTurnIndex < turnOrder.Count)
+        {
+            var entity = turnOrder[currentTurnIndex];
+            entity.HasActedThisTurn = true;
+        }
+
+        // Check for battle end
         if (CheckBattleEndConditions())
         {
             EndBattle();
             return;
         }
-        
-        // Start next round
-        currentRound++;
-        StartPlayerTurn();
+
+        // Move to next turn
+        currentTurnIndex++;
+        ProcessNextTurn();
     }
-    
+
+    private void EndRound()
+    {
+        GD.Print($"[TurnManager] === Round {currentRound} Ended ===");
+
+        // Process turn end effects for all entities
+        stateManager.ProcessTurnEndEffects();
+
+        // Check for battle end after processing effects
+        if (CheckBattleEndConditions())
+        {
+            EndBattle();
+            return;
+        }
+
+        // Start next round
+        StartNextRound();
+    }
+
     public void ReturnToActionSelection()
     {
         stateManager.SetCurrentPhase(BattleStateManager.BattlePhase.ActionSelection);
         uiController.EndTargetSelection();
         uiController.ShowMainMenu();
-        
+
         GD.Print("[TurnManager] Returned to action selection");
     }
-    
+
     #endregion
-    
-    #region Turn Processing
-    
-    private void ProcessPlayerTurnEnd()
-    {
-        GD.Print("[TurnManager] Processing player turn end effects");
-        
-        // Process status effects for player
-        stateManager.ProcessTurnEndEffects();
-        
-        // TODO: Integrate with BattleLogic Entity.ProcessTurnEnd() for player
-        // - Process poison/regen effects
-        // - Decrease status effect durations
-        // - Apply any end-of-turn triggers
-    }
-    
-    private void ProcessEnemyActions()
-    {
-        GD.Print("[TurnManager] Processing enemy AI actions");
-        
-        // TODO: Implement enemy AI system
-        // For now, enemies skip their turn
-        
-        // TODO: Integrate with BattleLogic AI system:
-        // - Evaluate available actions
-        // - Select optimal targets
-        // - Execute enemy abilities
-        // - Apply AI decision making
-    }
-    
-    private void ProcessEnemyTurnEnd()
-    {
-        GD.Print("[TurnManager] Processing enemy turn end effects");
-        
-        // TODO: Integrate with BattleLogic Entity.ProcessTurnEnd() for enemies
-        // - Process status effects for all enemies
-        // - Apply regeneration/poison/other effects
-        // - Decrease status effect durations
-    }
-    
+
+    #region Battle End
+
     private bool CheckBattleEndConditions()
     {
-        // Use state manager to check battle end conditions
         var battleEnded = stateManager.CheckBattleEndConditions();
-        
+
         if (battleEnded)
         {
             GD.Print("[TurnManager] Battle end conditions met");
         }
-        
-        // TODO: Integrate with BattleLogic BattleState.IsGameOver()
-        // - Check if player is defeated
-        // - Check if all enemies are defeated
-        // - Check for scenario-specific victory conditions
-        
+
         return battleEnded;
     }
-    
+
     private void EndBattle()
     {
         battleActive = false;
         stateManager.SetCurrentPhase(BattleStateManager.BattlePhase.BattleEnd);
-        
+
         GD.Print("[TurnManager] Battle ended");
-        
-        // Determine battle outcome
+
         DetermineBattleOutcome();
-        
-        // TODO: Handle battle results
-        // - Award experience/money for victory
-        // - Handle defeat scenarios
-        // - Transition to post-battle state
     }
-    
+
     private void DetermineBattleOutcome()
     {
-        // TODO: Implement proper victory/defeat logic
-        var playerPosition = stateManager.GetPlayerPosition();
-        var enemyPosition = stateManager.GetEnemyPosition();
-        
-        // For now, just log the outcome
-        GD.Print("[TurnManager] Determining battle outcome...");
-        
-        // TODO: Integrate with BattleLogic:
-        // - Check Entity.IsAlive for all participants
-        // - Apply scenario-specific victory conditions
-        // - Award appropriate rewards
+        var player = stateManager.GetPlayer();
+
+        if (player?.IsAlive == true)
+        {
+            GD.Print("[TurnManager] === VICTORY ===");
+        }
+        else
+        {
+            GD.Print("[TurnManager] === DEFEAT ===");
+        }
     }
-    
+
     #endregion
-    
+
     #region State Access
-    
+
     public bool IsBattleActive() => battleActive;
     public int GetCurrentRound() => currentRound;
-    
-    public bool IsPlayerTurn() => 
-        stateManager.GetCurrentPhase() == BattleStateManager.BattlePhase.PlayerTurn ||
-        stateManager.GetCurrentPhase() == BattleStateManager.BattlePhase.ActionSelection ||
-        stateManager.GetCurrentPhase() == BattleStateManager.BattlePhase.TargetSelection;
-    
-    public bool IsEnemyTurn() => 
+    public Entity GetCurrentActor() => currentTurnIndex < turnOrder.Count ? turnOrder[currentTurnIndex] : null;
+
+    public bool IsPlayerTurn()
+    {
+        var currentActor = GetCurrentActor();
+        return currentActor?.Type == EntityType.Player;
+    }
+
+    public bool IsEnemyTurn() =>
         stateManager.GetCurrentPhase() == BattleStateManager.BattlePhase.EnemyTurn;
-    
+
     #endregion
-    
+
     #region Debug Methods
-    
+
     public void ForceEndBattle()
     {
         GD.Print("[TurnManager] Force ending battle (debug)");
         EndBattle();
     }
-    
+
     public void SkipToNextRound()
     {
         GD.Print("[TurnManager] Skipping to next round (debug)");
-        EndPlayerTurn();
+        EndRound();
     }
-    
+
+    public void PrintTurnOrder()
+    {
+        GD.Print("[TurnManager] Current turn order:");
+        for (int i = 0; i < turnOrder.Count; i++)
+        {
+            var marker = i == currentTurnIndex ? ">>> " : "    ";
+            GD.Print($"{marker}{i + 1}. {turnOrder[i].Name} (Initiative: {turnOrder[i].Initiative})");
+        }
+    }
+
     #endregion
 }

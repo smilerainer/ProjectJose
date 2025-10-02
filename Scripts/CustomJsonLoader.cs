@@ -15,11 +15,46 @@ namespace CustomJsonSystem
         public List<ActionConfig> Items { get; set; } = new();
         public List<ActionConfig> TalkOptions { get; set; } = new();
         public List<ActionConfig> MoveOptions { get; set; } = new();
+        public List<EntityDefinition> Entities { get; set; } = new();
         public GameSettings Settings { get; set; } = new();
     }
     
-
+    public class EntityDefinition
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string EntityType { get; set; } = "Enemy"; // Player, Ally, Enemy, NPC, Neutral
+        public float MaxHP { get; set; } = 100;
+        public int Initiative { get; set; } = 50;
+        public int Speed { get; set; } = 5;
+        public Vector2IData StartPosition { get; set; } = new();
+        public List<string> AvailableSkills { get; set; } = new();
+        public List<string> AvailableItems { get; set; } = new();
+        public NPCBehaviorConfig BehaviorConfig { get; set; } = new();
+    }
     
+    public class NPCBehaviorConfig
+    {
+        public string BehaviorType { get; set; } = "balanced";
+        public int AggressionLevel { get; set; } = 5;
+        public int CautiousnessLevel { get; set; } = 5;
+        public float HealthThreshold { get; set; } = 0.3f;
+        
+        public int AttackPriority { get; set; } = 5;
+        public int DefendPriority { get; set; } = 5;
+        public int SupportPriority { get; set; } = 5;
+        public int MovePriority { get; set; } = 5;
+        
+        public List<string> PreferredTargets { get; set; } = new();
+        public bool AvoidFriendlyFire { get; set; } = true;
+        public bool PreferGroupedTargets { get; set; } = false;
+        
+        public List<string> PreferredSkills { get; set; } = new();
+        public List<string> EmergencySkills { get; set; } = new();
+        public int MinRangePreference { get; set; } = 0;
+        public int MaxRangePreference { get; set; } = 10;
+    }
+
     public class PatternCell
     {
         public int X { get; set; } = 0;
@@ -101,7 +136,6 @@ namespace CustomJsonSystem
         public Vector2I ToVector2I() => new Vector2I(X, Y);
         public static Vector2IData FromVector2I(Vector2I vector) => new() { X = vector.X, Y = vector.Y };
     }
-    
     
     #endregion
 
@@ -219,11 +253,9 @@ namespace CustomJsonSystem
         {
             var config = LoadFromFile<BattleConfigData>(filePath);
 
-            // Don't create default config - let the system handle missing configs better
             if (config.Skills.Count == 0 && config.Items.Count == 0 && config.MoveOptions.Count == 0 && config.TalkOptions.Count == 0)
             {
                 GD.PrintErr("Configuration file appears to be empty or invalid. Please ensure battle_config.json is properly formatted.");
-                // Return the empty config instead of a default one to avoid issues
                 return config;
             }
 

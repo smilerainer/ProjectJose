@@ -1,18 +1,16 @@
-// BattleStateManager.cs - Manages current battle state and entities
+// BattleStateManager.cs - Manages current battle state and entities (Updated with Entity System)
 using Godot;
 using System.Collections.Generic;
+using System.Linq;
+using CustomJsonSystem;
 
 public class BattleStateManager
 {
     #region State Data
     
-    private Vector2I playerPosition = new Vector2I(0, 0);
-    private Vector2I enemyPosition = new Vector2I(3, 0);
-    private Dictionary<Vector2I, string> entityPositions = new();
+    private List<Entity> allEntities = new();
+    private Dictionary<Vector2I, Entity> entityPositionMap = new();
     private HexGrid hexGrid;
-    
-    // Track HP for each entity
-    private Dictionary<string, (float current, float max)> entityHP = new();
     
     #endregion
     
@@ -48,29 +46,270 @@ public class BattleStateManager
     
     public void SetupInitialBattleState()
     {
-        SetupEntities();
+        SetupDefaultEntities();
         currentPhase = BattlePhase.PlayerTurn;
     }
     
-    private void SetupEntities()
+    public void SetupBattleFromConfig(BattleConfigData config)
     {
-        if (hexGrid == null) return;
+        ClearAllEntities();
         
-        // Setup player
-        hexGrid.SetTileWithCoords(playerPosition, CellLayer.Entity, new Vector2I(0, 0));
-        hexGrid.SetCellOccupied(playerPosition, true);
-        hexGrid.SetCellMetadata(playerPosition, "description", "Player Character");
-        entityPositions[playerPosition] = "player";
-        entityHP["player"] = (100f, 100f);
+        if (config.Entities != null && config.Entities.Count > 0)
+        {
+            foreach (var entityDef in config.Entities)
+            {
+                var entity = Entity.FromDefinition(entityDef);
+                AddEntity(entity);
+            }
+            GD.Print($"[BattleState] Loaded {allEntities.Count} entities from config");
+        }
+        else
+        {
+            SetupDefaultEntities();
+        }
         
-        // Setup enemy
-        hexGrid.SetTileWithCoords(enemyPosition, CellLayer.Entity, new Vector2I(1, 0));
-        hexGrid.SetCellOccupied(enemyPosition, true);
-        hexGrid.SetCellMetadata(enemyPosition, "description", "Enemy Warrior");
-        entityPositions[enemyPosition] = "enemy";
-        entityHP["enemy"] = (80f, 80f);
+        currentPhase = BattlePhase.PlayerTurn;
+    }
+    
+    private void SetupDefaultEntities()
+    {
+        // Default player
+        var player = new Entity(
+            "player_1",
+            "Player",
+            EntityType.Player,
+            new Vector2I(0, 0),
+            100f,
+            50,
+            5
+        );
+        AddEntity(player);
         
-        GD.Print($"[BattleState] Entities placed - Player: 100/100 HP, Enemy: 80/80 HP");
+        // Default enemy
+        var enemy = new Entity(
+            "enemy_1",
+            "Enemy Warrior",
+            EntityType.Enemy,
+            new Vector2I(3, 0),
+            80f,
+            45,
+            4
+        );
+        enemy.BehaviorType = "balanced";
+        enemy.AvailableSkills = new List<string> { "direct_hit" };  // ← Add this line
+        AddEntity(enemy);
+        
+        GD.Print($"[BattleState] Setup default entities - Player: 100 HP, Enemy: 80 HP");
+    }
+        
+    #endregion
+    
+    #region Entity Management
+    
+    public void AddEntity(Entity entity)
+    {
+        if (entity == null) return;
+        
+        allEntities.Add(entity);
+        entityPositionMap[entity.Position] = entity;
+        
+        if (hexGrid != null)
+        {
+            var atlasCoords = GetAtlasCoordsForEntityType(entity.Type);
+            hexGrid.SetTileWithCoords(entity.Position, CellLayer.Entity, atlasCoords);
+            hexGrid.SetCellOccupied(entity.Position, true);
+            hexGrid.SetCellMetadata(entity.Position, "description", entity.Name);
+        }
+        
+        GD.Print($"[BattleState] Added entity: {entity.Name} ({entity.Type}) at {entity.Position}");
+    }
+    
+    public void RemoveEntity(Entity entity)
+    {
+        if (entity == null) return;
+        
+        allEntities.Remove(entity);
+        entityPositionMap.Remove(entity.Position);
+        
+        if (hexGrid != null)
+        {
+            hexGrid.ClearTile(entity.Position, CellLayer.Entity);
+            hexGrid.SetCellOccupied(entity.Position, false);
+            hexGrid.SetCellMetadata(entity.Position, "description", "");
+        }
+        
+        GD.Print($"[BattleState] Removed entity: {entity.Name}");
+    }
+    
+    public void ClearAllEntities()
+    {
+        foreach (var entity in allEntities.ToList())
+        {
+            RemoveEntity(entity);
+        }
+        allEntities.Clear();
+        entityPositionMap.Clear();
+    }
+    
+    public void MoveEntity(Entity entity, Vector2I newPosition)
+    {
+        if (entity == null || hexGrid == null) return;
+        
+        var oldPosition = entity.Position;
+        
+        // Clear old position
+        hexGrid.ClearTile(oldPosition, CellLayer.Entity);
+        hexGrid.SetCellOccupied(oldPosition, false);
+        hexGrid.SetCellMetadata(oldPosition, "description", "");
+        entityPositionMap.Remove(oldPosition);
+        
+        // Update entity
+        entity.Position = newPosition;
+        
+        // Set new position
+        var atlasCoords = GetAtlasCoordsForEntityType(entity.Type);
+        hexGrid.SetTileWithCoords(newPosition, CellLayer.Entity, atlasCoords);
+        hexGrid.SetCellOccupied(newPosition, true);
+        hexGrid.SetCellMetadata(newPosition, "description", entity.Name);
+        entityPositionMap[newPosition] = entity;
+        
+        GD.Print($"[BattleState] {entity.Name} moved from {oldPosition} to {newPosition}");
+    }
+    
+    private Vector2I GetAtlasCoordsForEntityType(EntityType type)
+    {
+        return type switch
+        {
+            EntityType.Player => new Vector2I(0, 0),
+            EntityType.Ally => new Vector2I(2, 0),
+            EntityType.Enemy => new Vector2I(1, 0),
+            EntityType.NPC => new Vector2I(3, 0),
+            EntityType.Neutral => new Vector2I(4, 0),
+            _ => new Vector2I(0, 0)
+        };
+    }
+    
+    #endregion
+    
+    #region Entity Queries
+    
+    public List<Entity> GetAllEntities() => new List<Entity>(allEntities);
+    public List<Entity> GetAliveEntities() => allEntities.Where(e => e.IsAlive).ToList();
+    public Entity GetPlayer() => allEntities.FirstOrDefault(e => e.Type == EntityType.Player);
+    public Entity GetEntityAt(Vector2I position) => entityPositionMap.GetValueOrDefault(position);
+    
+    public List<Entity> GetEntitiesOfType(EntityType type)
+    {
+        return allEntities.Where(e => e.Type == type && e.IsAlive).ToList();
+    }
+    
+    public bool IsOccupiedCell(Vector2I cell) => entityPositionMap.ContainsKey(cell);
+    
+    #endregion
+    
+    #region Legacy Compatibility (for existing code)
+    
+    public Vector2I GetPlayerPosition() => GetPlayer()?.Position ?? Vector2I.Zero;
+    public Vector2I GetEnemyPosition() => allEntities.FirstOrDefault(e => e.Type == EntityType.Enemy)?.Position ?? Vector2I.Zero;
+    
+    public bool IsPlayerCell(Vector2I cell)
+    {
+        var entity = GetEntityAt(cell);
+        return entity?.Type == EntityType.Player;
+    }
+    
+    public bool IsEnemyCell(Vector2I cell)
+    {
+        var entity = GetEntityAt(cell);
+        return entity?.Type == EntityType.Enemy;
+    }
+    
+    public void MovePlayer(Vector2I newPosition)
+    {
+        var player = GetPlayer();
+        if (player != null)
+        {
+            MoveEntity(player, newPosition);
+        }
+    }
+    
+    #endregion
+    
+    #region Combat Actions
+    
+    public void ApplyDamageToEntity(Vector2I position, float damage)
+    {
+        var entity = GetEntityAt(position);
+        if (entity == null) return;
+        
+        entity.TakeDamage(damage);
+        GD.Print($"[BattleState] {entity.Name} at {position} takes {damage} damage -> {entity.CurrentHP}/{entity.MaxHP} HP");
+        
+        if (!entity.IsAlive)
+        {
+            GD.Print($"[BattleState] {entity.Name} defeated!");
+            OnEntityDefeated(entity);
+        }
+    }
+    
+    public void ApplyHealingToEntity(Vector2I position, float healing)
+    {
+        var entity = GetEntityAt(position);
+        if (entity == null) return;
+        
+        entity.Heal(healing);
+        GD.Print($"[BattleState] {entity.Name} at {position} heals {healing} HP -> {entity.CurrentHP}/{entity.MaxHP} HP");
+    }
+    
+    public void ApplyStatusEffectToEntity(Vector2I position, string statusEffect)
+    {
+        var entity = GetEntityAt(position);
+        if (entity == null) return;
+        
+        var status = new StatusEffect(statusEffect, 3, 0, 0);
+        entity.AddStatus(status);
+        GD.Print($"[BattleState] {entity.Name} at {position} gains {statusEffect} status");
+    }
+    
+    public void RemoveStatusEffectFromEntity(Vector2I position, string statusEffect)
+    {
+        var entity = GetEntityAt(position);
+        if (entity == null) return;
+        
+        entity.RemoveStatus(statusEffect);
+        GD.Print($"[BattleState] {entity.Name} at {position} loses {statusEffect} status");
+    }
+    
+    private void OnEntityDefeated(Entity entity)
+    {
+        // Keep entity in list for now, just marked as dead
+        // Remove visual representation after a delay if needed
+    }
+    
+    #endregion
+    
+    #region Turn Processing
+    
+    public void ProcessTurnEndEffects()
+    {
+        foreach (var entity in allEntities.Where(e => e.IsAlive))
+        {
+            entity.ProcessTurnEnd();
+        }
+        GD.Print("[BattleState] Processed turn end effects for all entities");
+    }
+    
+    public bool CheckBattleEndConditions()
+    {
+        var player = GetPlayer();
+        if (player == null || !player.IsAlive)
+            return true;
+        
+        var aliveEnemies = allEntities.Any(e => e.Type == EntityType.Enemy && e.IsAlive);
+        if (!aliveEnemies)
+            return true;
+        
+        return false;
     }
     
     #endregion
@@ -79,101 +318,6 @@ public class BattleStateManager
     
     public BattlePhase GetCurrentPhase() => currentPhase;
     public void SetCurrentPhase(BattlePhase phase) => currentPhase = phase;
-    
-    public Vector2I GetPlayerPosition() => playerPosition;
-    public Vector2I GetEnemyPosition() => enemyPosition;
-    
-    public bool IsPlayerCell(Vector2I cell) => cell == playerPosition;
-    public bool IsEnemyCell(Vector2I cell) => cell == enemyPosition;
-    public bool IsOccupiedCell(Vector2I cell) => entityPositions.ContainsKey(cell);
-    
-    public Dictionary<Vector2I, string> GetAllEntityPositions() => new(entityPositions);
-    
-    #endregion
-    
-    #region Entity Management
-    
-    public void MovePlayer(Vector2I newPosition)
-    {
-        if (hexGrid == null) return;
-        
-        // Clear old position
-        hexGrid.ClearTile(playerPosition, CellLayer.Entity);
-        hexGrid.SetCellOccupied(playerPosition, false);
-        hexGrid.SetCellMetadata(playerPosition, "description", "");
-        entityPositions.Remove(playerPosition);
-        
-        // Set new position
-        playerPosition = newPosition;
-        hexGrid.SetTileWithCoords(playerPosition, CellLayer.Entity, new Vector2I(0, 0));
-        hexGrid.SetCellOccupied(playerPosition, true);
-        hexGrid.SetCellMetadata(playerPosition, "description", "Player Character");
-        entityPositions[playerPosition] = "player";
-        
-        GD.Print($"[BattleState] Player moved to {playerPosition}");
-    }
-    
-    public void ApplyDamageToEntity(Vector2I position, float damage)
-    {
-        var entityType = GetEntityTypeAt(position);
-        if (!entityHP.ContainsKey(entityType)) return;
-        
-        var (current, max) = entityHP[entityType];
-        current = Mathf.Max(0, current - damage);
-        entityHP[entityType] = (current, max);
-        
-        GD.Print($"[BattleState] {entityType} at {position} takes {damage} damage -> {current}/{max} HP");
-        
-        if (current <= 0)
-        {
-            GD.Print($"[BattleState] {entityType} defeated!");
-        }
-    }
-    
-    public void ApplyHealingToEntity(Vector2I position, float healing)
-    {
-        var entityType = GetEntityTypeAt(position);
-        if (!entityHP.ContainsKey(entityType)) return;
-        
-        var (current, max) = entityHP[entityType];
-        current = Mathf.Min(max, current + healing);
-        entityHP[entityType] = (current, max);
-        
-        GD.Print($"[BattleState] {entityType} at {position} heals {healing} HP -> {current}/{max} HP");
-    }
-    
-    public void ApplyStatusEffectToEntity(Vector2I position, string statusEffect)
-    {
-        // TODO: Integrate with BattleLogic Entity.AddStatus()
-        var entityType = GetEntityTypeAt(position);
-        GD.Print($"[BattleState] {entityType} at {position} gains {statusEffect} status");
-    }
-    
-    public void RemoveStatusEffectFromEntity(Vector2I position, string statusEffect)
-    {
-        // TODO: Integrate with BattleLogic Entity.RemoveStatus()
-        var entityType = GetEntityTypeAt(position);
-        GD.Print($"[BattleState] {entityType} at {position} loses {statusEffect} status");
-    }
-    
-    public void ProcessTurnEndEffects()
-    {
-        // TODO: Integrate with BattleLogic Entity.ProcessTurnEnd()
-        GD.Print("[BattleState] Processing turn end effects for all entities");
-    }
-    
-    public bool CheckBattleEndConditions()
-    {
-        // Check if player is defeated
-        if (entityHP.ContainsKey("player") && entityHP["player"].current <= 0)
-            return true;
-        
-        // Check if all enemies are defeated
-        if (entityHP.ContainsKey("enemy") && entityHP["enemy"].current <= 0)
-            return true;
-        
-        return false;
-    }
     
     #endregion
     
@@ -193,12 +337,6 @@ public class BattleStateManager
         if (hexGrid == null)
             return positions;
         
-        // Get grid dimensions from HexGrid
-        // Assuming HexGrid has a way to get its bounds
-        // If not, you may need to add GetGridWidth() and GetGridHeight() methods to HexGrid
-        
-        // For now, using a reasonable search range
-        // Adjust these values based on your actual grid size
         int maxSearch = 20;
         
         for (int x = -maxSearch; x <= maxSearch; x++)
@@ -214,17 +352,6 @@ public class BattleStateManager
         }
         
         return positions;
-    }
-    
-    #endregion
-    
-    #region Helper Methods
-    
-    private string GetEntityTypeAt(Vector2I position)
-    {
-        if (entityPositions.TryGetValue(position, out string entityType))
-            return entityType;
-        return "unknown";
     }
     
     #endregion
