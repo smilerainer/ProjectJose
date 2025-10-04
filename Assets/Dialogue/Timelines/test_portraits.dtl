@@ -1,0 +1,7 @@
+test: hello 1
+join test left [animation="Fade In"]
+test: hi 2
+join test2 center [mirrored="true"]
+hello 3
+join nora rightmost
+hi 4

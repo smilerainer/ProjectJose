@@ -11,7 +11,7 @@ public partial class CentralInputManager : Node2D
         None,
         Menu,
         HexGrid,
-        Novel,
+        Dialogue,
         Mixed
     }
     
@@ -53,7 +53,7 @@ public partial class CentralInputManager : Node2D
     private int gridWidth = 0;
     private int gridHeight = 0;
     private Vector2I currentGridPosition = Vector2I.Zero;
-    [Export] private bool enableTabCycling = false; // Tab to cycle between menus
+    [Export] private bool enableTabCycling = false;
     
     #endregion
     
@@ -61,7 +61,6 @@ public partial class CentralInputManager : Node2D
     
     private List<MenuControls> menuControls = new();
     private List<HexControls> hexControls = new();
-    private List<NovelControls> novelControls = new();
     
     #endregion
     
@@ -114,9 +113,6 @@ public partial class CentralInputManager : Node2D
             case HexControls hex:
                 RegisterControl(hex);
                 break;
-            case NovelControls novel:
-                RegisterControl(novel);
-                break;
         }
         
         foreach (Node child in node.GetChildren())
@@ -139,12 +135,6 @@ public partial class CentralInputManager : Node2D
     {
         if (!hexControls.Contains(hex))
             hexControls.Add(hex);
-    }
-    
-    public void RegisterControl(NovelControls novel)
-    {
-        if (!novelControls.Contains(novel))
-            novelControls.Add(novel);
     }
     
     #endregion
@@ -174,9 +164,8 @@ public partial class CentralInputManager : Node2D
     {
         var activeMenus = menuControls.Where(m => m.IsActive).ToList();
         var activeHex = hexControls.Where(h => h.IsActive).ToList();
-        var activeNovel = novelControls.Where(n => n.IsActive).ToList();
         
-        int totalActive = activeMenus.Count + activeHex.Count + activeNovel.Count;
+        int totalActive = activeMenus.Count + activeHex.Count;
         
         if (totalActive == 0)
         {
@@ -195,25 +184,14 @@ public partial class CentralInputManager : Node2D
                 currentContext = InputContext.HexGrid;
                 currentActiveControl = activeHex[0];
             }
-            else if (activeNovel.Count > 0)
-            {
-                currentContext = InputContext.Novel;
-                currentActiveControl = activeNovel[0];
-            }
         }
         else
         {
-            // FIXED: Prioritize HexGrid when multiple controls are active
-            // This handles the case where both menu and hex controls might be active
+            // Prioritize HexGrid when multiple controls are active
             if (activeHex.Count > 0)
             {
                 currentContext = InputContext.HexGrid;
                 currentActiveControl = activeHex[0];
-            }
-            else if (activeNovel.Count > 0)
-            {
-                currentContext = InputContext.Novel;
-                currentActiveControl = activeNovel[0];
             }
             else if (activeMenus.Count > 0)
             {
@@ -223,9 +201,7 @@ public partial class CentralInputManager : Node2D
             else
             {
                 currentContext = InputContext.Mixed;
-                currentActiveControl = (Node)activeNovel.FirstOrDefault() ?? 
-                                      (Node)activeMenus.FirstOrDefault() ?? 
-                                      (Node)activeHex.FirstOrDefault();
+                currentActiveControl = activeMenus.FirstOrDefault();
             }
         }
     }
@@ -241,7 +217,6 @@ public partial class CentralInputManager : Node2D
     
     public override void _UnhandledInput(InputEvent @event)
     {
-        // Handle Tab cycling if enabled
         if (enableTabCycling && @event.IsActionPressed("ui_focus_next"))
         {
             GetViewport().SetInputAsHandled();
@@ -250,7 +225,6 @@ public partial class CentralInputManager : Node2D
     
     public override void _Input(InputEvent @event)
     {
-        // Handle Tab cycling first if enabled
         if (enableTabCycling && @event.IsActionPressed("ui_focus_next"))
         {
             GetViewport().SetInputAsHandled();
@@ -266,9 +240,6 @@ public partial class CentralInputManager : Node2D
                 break;
             case HexControls hex:
                 HandleHexInput(hex, @event);
-                break;
-            case NovelControls novel:
-                HandleNovelInput(novel, @event);
                 break;
         }
     }
@@ -300,33 +271,7 @@ public partial class CentralInputManager : Node2D
     
     private void HandleHexInput(HexControls hex, InputEvent @event)
     {
-        // Let HexControls handle its own input - it already has proper input handling
-        // The HexControls._Input method will process the input appropriately
-        // We don't need to duplicate the input logic here
-    }
-    
-    private void HandleNovelInput(NovelControls novel, InputEvent @event)
-    {
-        if (IsAcceptInput(@event) || IsMouseClick(@event))
-        {
-            if (novel.IsShowingChoices)
-            {
-                // Handle choice selection
-            }
-            else
-            {
-                novel.AdvanceText();
-            }
-        }
-        else if (novel.IsShowingChoices)
-        {
-            var direction = GetDirectionInput(@event);
-            if (direction != Vector2I.Zero)
-            {
-                novel.Navigate(direction);
-                UpdateCursorTarget();
-            }
-        }
+        // HexControls handles its own input
     }
     
     private Vector2I GetDirectionInput(InputEvent @event)
@@ -438,7 +383,6 @@ public partial class CentralInputManager : Node2D
             currentActiveControl = null;
             currentContext = InputContext.None;
         }
-        
     }
     
     public void SetMenuButtonArray(string[] buttonTexts)
@@ -451,17 +395,12 @@ public partial class CentralInputManager : Node2D
         ClearSubmenu();
     }
     
-
-    // Modify the NotifySubmenuSelection method:
     private void NotifySubmenuSelection(MenuControls menu)
     {
         int index = menu.GetLinearIndex();
         string text = menu.GetCurrentButtonText();
         
-        // Emit our custom signal for external listeners
         EmitSignal(SignalName.DynamicMenuSelection, index, text);
-        
-        // Also activate the button for other systems that might need it
         menu.ActivateCurrentButton();
     }
     
@@ -532,7 +471,6 @@ public partial class CentralInputManager : Node2D
         {
             MenuControls menu => GetMenuCursorPosition(menu),
             HexControls hex => GetHexCursorPosition(hex),
-            NovelControls novel => novel.CurrentActionPosition,
             _ => GetViewport().GetMousePosition()
         };
     }
