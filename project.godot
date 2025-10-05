@@ -57,10 +57,10 @@ choices/reveal_by_input=false
 save/autosave_delay=60.0
 save/encryption_on_exports_only=true
 text/autopauses={
-"!": 1.0,
-",": 1.0,
-".": 2.0,
-"?": 2.0
+"!": 0.5,
+",": 0.5,
+".": 1.0,
+"?": 1.0
 }
 audio/channel_defaults={
 "": {

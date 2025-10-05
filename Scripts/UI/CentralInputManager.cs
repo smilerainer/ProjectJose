@@ -25,6 +25,7 @@ public partial class CentralInputManager : Node2D
     [Export] private bool enableCursor = true;
     [Export] private bool enableCursorSnapping = true;
     [Export] private Control dynamicMenuRoot;
+    [Export] private Control dialogueContainer;
     [Signal] public delegate void DynamicMenuSelectionEventHandler(int index, string buttonText);
     
     #endregion
@@ -43,6 +44,15 @@ public partial class CentralInputManager : Node2D
     private MenuControls previousMenu;
     private bool isShowingSubmenu = false;
     private string currentSubmenuContext = "";
+    
+    #endregion
+    
+    #region Dialogic State
+    
+    private Node dialogicAutoload;
+    private bool dialogicAvailable = false;
+    private InputContext contextBeforeDialogue = InputContext.None;
+    private Node controlBeforeDialogue;
     
     #endregion
     
@@ -91,6 +101,7 @@ public partial class CentralInputManager : Node2D
         SetProcessUnhandledInput(true);
         
         AutoDiscoverControls();
+        SetupDialogic();
         SetupCursorDisplay();
         CallDeferred(nameof(InitialCursorPositioning));
     }
@@ -121,6 +132,33 @@ public partial class CentralInputManager : Node2D
         }
     }
     
+    private void SetupDialogic()
+    {
+        dialogicAutoload = GetNodeOrNull("/root/Dialogic");
+        
+        if (dialogicAutoload != null)
+        {
+            dialogicAvailable = true;
+            
+            // Connect to Dialogic signals
+            if (dialogicAutoload.HasSignal("timeline_started"))
+            {
+                dialogicAutoload.Connect("timeline_started", new Callable(this, nameof(OnDialogicStarted)));
+            }
+            
+            if (dialogicAutoload.HasSignal("timeline_ended"))
+            {
+                dialogicAutoload.Connect("timeline_ended", new Callable(this, nameof(OnDialogicEnded)));
+            }
+            
+            GD.Print("[InputManager] Dialogic integration enabled");
+        }
+        else
+        {
+            GD.Print("[InputManager] Dialogic not found - dialogue context disabled");
+        }
+    }
+    
     #endregion
     
     #region Control Registration
@@ -145,6 +183,7 @@ public partial class CentralInputManager : Node2D
     {
         UpdateActiveContext();
         UpdateCursor(delta);
+        UpdateDialogueContainerVisibility();
     }
     
     private void UpdateActiveContext()
@@ -160,8 +199,50 @@ public partial class CentralInputManager : Node2D
         }
     }
     
+    private void UpdateDialogueContainerVisibility()
+    {
+        if (dialogueContainer == null || !IsInstanceValid(dialogueContainer)) return;
+        
+        bool shouldBeVisible = IsDialogicActive();
+        
+        if (dialogueContainer.Visible != shouldBeVisible)
+        {
+            dialogueContainer.Visible = shouldBeVisible;
+        }
+        
+        // Also update CanvasLayer children visibility
+        foreach (Node child in dialogueContainer.GetChildren())
+        {
+            if (child is CanvasLayer canvasLayer && canvasLayer.Visible != shouldBeVisible)
+            {
+                canvasLayer.Visible = shouldBeVisible;
+            }
+        }
+    }
+    
     private void DetectActiveControl()
     {
+        // HIGHEST PRIORITY: Check if Dialogic is active
+        if (dialogicAvailable && IsDialogicActive())
+        {
+            if (currentContext != InputContext.Dialogue)
+            {
+                // Store previous context before switching to dialogue
+                contextBeforeDialogue = currentContext;
+                controlBeforeDialogue = currentActiveControl;
+            }
+            
+            currentContext = InputContext.Dialogue;
+            currentActiveControl = null; // Dialogic handles itself
+            return;
+        }
+        
+        // If we just exited dialogue, restore previous context if still valid
+        if (currentContext == InputContext.Dialogue)
+        {
+            // Context will be re-evaluated below
+        }
+        
         var activeMenus = menuControls.Where(m => m.IsActive).ToList();
         var activeHex = hexControls.Where(h => h.IsActive).ToList();
         
@@ -187,6 +268,7 @@ public partial class CentralInputManager : Node2D
         }
         else
         {
+            // Most recently initialized = last to become active
             // Prioritize HexGrid when multiple controls are active
             if (activeHex.Count > 0)
             {
@@ -209,6 +291,80 @@ public partial class CentralInputManager : Node2D
     private void OnContextChanged()
     {
         UpdateCursorTarget();
+        
+        if (currentContext == InputContext.Dialogue)
+        {
+            GD.Print("[InputManager] Switched to Dialogue context");
+        }
+        else if (currentContext != InputContext.Dialogue)
+        {
+            GD.Print($"[InputManager] Switched to {currentContext} context");
+        }
+    }
+    
+    #endregion
+    
+    #region Dialogic Integration
+    
+    private bool IsDialogicActive()
+    {
+        if (dialogicAutoload == null) return false;
+        
+        // Check if Dialogic has an active timeline
+        var currentTimeline = dialogicAutoload.Get("current_timeline");
+        return currentTimeline.Obj != null;
+    }
+    
+    private void OnDialogicStarted()
+    {
+        GD.Print("[InputManager] Dialogic timeline started");
+        
+        // Show dialogue container if assigned
+        if (dialogueContainer != null && IsInstanceValid(dialogueContainer))
+        {
+            dialogueContainer.Show();
+            
+            // Also show any CanvasLayer children
+            foreach (Node child in dialogueContainer.GetChildren())
+            {
+                if (child is CanvasLayer canvasLayer)
+                {
+                    canvasLayer.Show();
+                }
+            }
+            
+            GD.Print($"[InputManager] Showed dialogue container - Visible: {dialogueContainer.Visible}");
+        }
+        else
+        {
+            GD.PrintErr("[InputManager] Dialogue container is null or invalid!");
+        }
+    }
+    
+    private void OnDialogicEnded()
+    {
+        GD.Print("[InputManager] Dialogic timeline ended");
+        
+        // Hide dialogue container if assigned
+        if (dialogueContainer != null && IsInstanceValid(dialogueContainer))
+        {
+            dialogueContainer.Hide();
+            
+            // Also hide any CanvasLayer children
+            foreach (Node child in dialogueContainer.GetChildren())
+            {
+                if (child is CanvasLayer canvasLayer)
+                {
+                    canvasLayer.Hide();
+                }
+            }
+            
+            GD.Print($"[InputManager] Hid dialogue container - Visible: {dialogueContainer.Visible}");
+        }
+        else
+        {
+            GD.PrintErr("[InputManager] Dialogue container is null or invalid!");
+        }
     }
     
     #endregion
@@ -225,6 +381,26 @@ public partial class CentralInputManager : Node2D
     
     public override void _Input(InputEvent @event)
     {
+        // CRITICAL: If Dialogic is active, consume ALL ui_* and navigation inputs
+        if (currentContext == InputContext.Dialogue)
+        {
+            // Block all navigation inputs during dialogue
+            if (@event.IsActionPressed("ui_up") || @event.IsActionPressed("ui_down") ||
+                @event.IsActionPressed("ui_left") || @event.IsActionPressed("ui_right") ||
+                @event.IsActionPressed("ui_accept") || @event.IsActionPressed("ui_cancel"))
+            {
+                // Let dialogic_default_action through, block everything else
+                if (!@event.IsActionPressed("dialogic_default_action"))
+                {
+                    GetViewport().SetInputAsHandled();
+                    return;
+                }
+            }
+            
+            // Pass through for Dialogic to handle
+            return;
+        }
+        
         if (enableTabCycling && @event.IsActionPressed("ui_focus_next"))
         {
             GetViewport().SetInputAsHandled();
@@ -276,13 +452,24 @@ public partial class CentralInputManager : Node2D
     
     private Vector2I GetDirectionInput(InputEvent @event)
     {
-        if (@event.IsActionPressed("ui_up") || IsKey(@event, Key.W) || IsKey(@event, Key.Up))
+        // Check action presses first (these include arrow keys via ui_* actions)
+        if (@event.IsActionPressed("ui_up"))
             return Vector2I.Up;
-        if (@event.IsActionPressed("ui_down") || IsKey(@event, Key.S) || IsKey(@event, Key.Down))
+        if (@event.IsActionPressed("ui_down"))
             return Vector2I.Down;
-        if (@event.IsActionPressed("ui_left") || IsKey(@event, Key.A) || IsKey(@event, Key.Left))
+        if (@event.IsActionPressed("ui_left"))
             return Vector2I.Left;
-        if (@event.IsActionPressed("ui_right") || IsKey(@event, Key.D) || IsKey(@event, Key.Right))
+        if (@event.IsActionPressed("ui_right"))
+            return Vector2I.Right;
+        
+        // Also check WASD directly as fallback
+        if (IsKey(@event, Key.W))
+            return Vector2I.Up;
+        if (IsKey(@event, Key.S))
+            return Vector2I.Down;
+        if (IsKey(@event, Key.A))
+            return Vector2I.Left;
+        if (IsKey(@event, Key.D))
             return Vector2I.Right;
         
         return Vector2I.Zero;
@@ -462,7 +649,10 @@ public partial class CentralInputManager : Node2D
     private void UpdateCursorVisibility()
     {
         if (cursorDisplay == null) return;
-        cursorDisplay.Visible = !(currentActiveControl is HexControls);
+        
+        // Hide cursor when in HexGrid or Dialogue context
+        cursorDisplay.Visible = currentContext != InputContext.HexGrid && 
+                                currentContext != InputContext.Dialogue;
     }
     
     private void UpdateCursorTarget()
