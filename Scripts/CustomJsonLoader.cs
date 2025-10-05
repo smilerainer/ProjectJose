@@ -18,18 +18,20 @@ namespace CustomJsonSystem
         public List<EntityDefinition> Entities { get; set; } = new();
         public GameSettings Settings { get; set; } = new();
     }
-    
+
     public class EntityDefinition
     {
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
-        public string EntityType { get; set; } = "Enemy"; // Player, Ally, Enemy, NPC, Neutral
+        public string EntityType { get; set; } = "Enemy";
         public float MaxHP { get; set; } = 100;
         public int Initiative { get; set; } = 50;
         public int Speed { get; set; } = 5;
         public Vector2IData StartPosition { get; set; } = new();
         public List<string> AvailableSkills { get; set; } = new();
         public List<string> AvailableItems { get; set; } = new();
+        public List<string> AvailableMoveOptions { get; set; } = new();  // ← ADD
+        public List<string> AvailableTalkOptions { get; set; } = new();  // ← ADD
         public NPCBehaviorConfig BehaviorConfig { get; set; } = new();
     }
     

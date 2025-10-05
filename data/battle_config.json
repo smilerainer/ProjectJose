@@ -358,33 +358,37 @@
 	}
   ],
 	"entities": [
-		{
-		"id": "player_1",
-		"name": "Hero",
-		"entityType": "Player",
-		"maxHP": 100,
-		"initiative": 50,
-		"speed": 5,
-		"startPosition": { "x": 0, "y": 0 },
-		"availableSkills": ["direct_hit"],
-		"availableItems": [],
-		"behaviorConfig": { "behaviorType": "balanced" }
-		},
-		{
-		"id": "enemy_1",
-		"name": "Test Enemy",
-		"entityType": "Enemy",
-		"maxHP": 50,
-		"initiative": 40,
-		"speed": 4,
-		"startPosition": { "x": 5, "y": 0 },
-		"availableSkills": ["direct_hit"],
-		"availableItems": [],
-		"behaviorConfig": {
-			"behaviorType": "balanced",
-			"aggressionLevel": 7
-		}
-		}
+  {
+    "id": "player_1",
+    "name": "Hero",
+    "entityType": "Player",
+    "maxHP": 100,
+    "initiative": 50,
+    "speed": 5,
+    "startPosition": { "x": 0, "y": 0 },
+    "availableSkills": ["direct_hit", "mortar_strike"],
+    "availableItems": ["health_potion"],
+    "availableMoveOptions": ["walk", "dash", "teleport"],
+    "availableTalkOptions": ["negotiate"],
+    "behaviorConfig": { "behaviorType": "balanced" }
+  },
+  {
+    "id": "enemy_1",
+    "name": "Test Enemy",
+    "entityType": "Enemy",
+    "maxHP": 50,
+    "initiative": 40,
+    "speed": 4,
+    "startPosition": { "x": 5, "y": 0 },
+    "availableSkills": ["direct_hit"],
+    "availableItems": [],
+    "availableMoveOptions": ["walk"], 
+    "availableTalkOptions": [],
+    "behaviorConfig": {
+      "behaviorType": "balanced",
+      "aggressionLevel": 7
+    }
+  }
 ],
   "settings": {
 	"startingMoney": 150,

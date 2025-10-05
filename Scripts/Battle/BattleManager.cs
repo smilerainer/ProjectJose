@@ -79,7 +79,9 @@ public partial class BattleManager : Node
     {
         if (configLoader.LoadConfiguration(configFilePath))
         {
-            stateManager.SetupInitialBattleState();
+            // Use this instead of SetupInitialBattleState()
+            stateManager.SetupBattleFromConfig(configLoader.GetBattleConfig());
+            
             uiController.SetupUI();
             turnManager.StartBattle();
         }
@@ -88,7 +90,6 @@ public partial class BattleManager : Node
             GD.PrintErr("[BattleManager] Failed to load battle configuration");
         }
     }
-    
     #endregion
     
     #region Public API - Events from UI

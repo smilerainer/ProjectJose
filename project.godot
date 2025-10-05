@@ -137,7 +137,7 @@ dialogic_default_action={
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://Assets/Dialogue/Translations/dialogic_character_translations.csv", "res://Assets/Dialogue/Translations/dialogic_test_portraits_translation.csv", "res://Assets/Dialogue/Translations/dialogic_character_translations.en.translation", "res://Assets/Dialogue/Translations/dialogic_test_portraits_translation.en.translation", "res://Assets/Dialogue/Translations/dialogic_test_portraits_translation.tl.translation", "res://Assets/Dialogue/Translations/dialogic_character_translations.tl.translation")
+locale/translations=PackedStringArray("res://Assets/Dialogue/Translations/dialogic_character_translations.en.translation", "res://Assets/Dialogue/Translations/dialogic_test_portraits_translation.en.translation", "res://Assets/Dialogue/Translations/dialogic_test_portraits_translation.tl.translation", "res://Assets/Dialogue/Translations/dialogic_character_translations.tl.translation")
 locale/test="en"
 
 [rendering]

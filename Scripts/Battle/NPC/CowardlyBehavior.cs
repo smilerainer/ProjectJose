@@ -15,6 +15,14 @@ public class CowardlyBehavior : INPCBehavior
     {
         // Always try to flee from enemies
         var moveOptions = configLoader.GetMoveOptionsForEntity(actor.Type.ToString());
+        
+        // Filter by entity's available move options
+        if (actor.AvailableMoveOptions.Count > 0)
+            moveOptions = moveOptions.Where(m => 
+                actor.AvailableMoveOptions.Contains(m.Id) || 
+                actor.AvailableMoveOptions.Contains(m.Name)
+            ).ToList();
+        
         var nearestEnemy = GetNearestEnemyPosition(actor, stateManager);
         
         if (nearestEnemy != Vector2I.Zero)

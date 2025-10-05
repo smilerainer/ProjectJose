@@ -225,13 +225,12 @@ public class BattleConfigurationLoader
         // For now, return all items with remaining uses
         return battleConfig.Items.Where(i => i.UsesRemaining > 0 || i.UsesRemaining == -1).ToList();
     }
-    
+
     public List<ActionConfig> GetTalkOptionsForEntity(string entityType)
     {
         if (!configLoaded) return new List<ActionConfig>();
-        
-        // TODO: Filter talk options based on entity relationships, context, etc.
-        // For now, return all talk options
+
+        // Return all talk options - filtering happens at entity level
         return battleConfig.TalkOptions.ToList();
     }
     
@@ -239,8 +238,7 @@ public class BattleConfigurationLoader
     {
         if (!configLoaded) return new List<ActionConfig>();
         
-        // TODO: Filter move options based on entity capabilities, terrain, etc.
-        // For now, return all move options
+        // Return all move options - filtering happens at entity level
         return battleConfig.MoveOptions.ToList();
     }
     

@@ -49,10 +49,12 @@ public class Entity
     #endregion
     
     #region Available Actions
-    
+
     public List<string> AvailableSkills { get; set; } = new();
     public List<string> AvailableItems { get; set; } = new();
-    
+    public List<string> AvailableMoveOptions { get; set; } = new();  // ← ADD
+    public List<string> AvailableTalkOptions { get; set; } = new();  // ← ADD
+
     #endregion
     
     #region Constructors
@@ -97,6 +99,8 @@ public class Entity
         entity.BehaviorConfig = def.BehaviorConfig;
         entity.AvailableSkills = new List<string>(def.AvailableSkills);
         entity.AvailableItems = new List<string>(def.AvailableItems);
+        entity.AvailableMoveOptions = new List<string>(def.AvailableMoveOptions);  // ← ADD
+        entity.AvailableTalkOptions = new List<string>(def.AvailableTalkOptions);  // ← ADD
         
         return entity;
     }
