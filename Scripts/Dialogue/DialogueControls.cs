@@ -13,6 +13,9 @@ public partial class DialogueControls : Control
     
     [ExportGroup("Layer Settings")]
     [Export] public int UIZIndex { get; set; } = 100;
+
+    [ExportGroup("Portrait Settings")]
+    [Export] public float PortraitTopOffset { get; set; } = 0f;
     
     private bool _panelDisabled = false;
     
@@ -31,20 +34,45 @@ public partial class DialogueControls : Control
     
     public override void _Process(double delta)
     {
-        // Continuously check and disable the panel once it appears
         if (!_panelDisabled)
         {
             DisableTextPanel();
         }
         
-        // Lower portrait z-index to ensure they render below UI
         LowerPortraitLayers();
+        FixPortraits(); // Add this
     }
    
+    private void FixPortraits()
+    {
+        var portraits = GetTree().GetNodesInGroup("dialogic_portrait");
+        
+        foreach (var portrait in portraits)
+        {
+            if (portrait is TextureRect textureRect && IsInstanceValid(textureRect))
+            {
+                // 1. Full size (no scaling)
+                textureRect.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
+                textureRect.ExpandMode = TextureRect.ExpandModeEnum.KeepSize;
+                textureRect.StretchMode = TextureRect.StretchModeEnum.Keep;
+                
+                // 2. Anchor to top
+                textureRect.AnchorTop = 0;
+                textureRect.OffsetTop = PortraitTopOffset;
+                
+                // 3. Crop from bottom (set ClipContents on parent if needed)
+                if (textureRect.GetParent() is Control parent)
+                {
+                    parent.ClipContents = true;
+                }
+            }
+        }
+    }
+
     private void DisableTextPanel()
     {
         var panel = GetNodeOrNull("/root/DialogicLayout_VisualNovelStyle/VN_TextboxLayer/Anchor/AnimationParent/Sizer/DialogTextPanel");
-        
+
         if (panel is Control control && IsInstanceValid(control))
         {
             // Make it completely invisible and non-interactive but keep it alive
@@ -52,16 +80,16 @@ public partial class DialogueControls : Control
             control.Modulate = new Color(1, 1, 1, 0); // Fully transparent
             control.ProcessMode = ProcessModeEnum.Disabled;
             control.MouseFilter = MouseFilterEnum.Ignore;
-            
+
             // Move it far off-screen as extra insurance
             control.Position = new Vector2(-10000, -10000);
-            
+
             // Try to disable it if it has that property
             if (control.HasMethod("set_enabled"))
             {
                 control.Call("set_enabled", false);
             }
-            
+
             _panelDisabled = true;
             GD.Print("Disabled DialogTextPanel (kept in tree for Dialogic)");
         }

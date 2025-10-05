@@ -23,6 +23,7 @@ Dialogic="*res://addons/dialogic/Core/DialogicGameHandler.gd"
 [dialogic]
 
 directories/dch_directory={
+"jose": "res://Assets/Dialogue/Characters/jose.dch",
 "nora": "res://Assets/Dialogue/Characters/nora.dch",
 "test": "res://Assets/Dialogue/Characters/test.dch",
 "test2": "res://Assets/Dialogue/Characters/test2.dch"
@@ -30,9 +31,12 @@ directories/dch_directory={
 directories/dtl_directory={
 "test_portraits": "res://Assets/Dialogue/Timelines/test_portraits.dtl"
 }
-layout/style_directory={}
+layout/style_directory={
+"": "res://Assets/Interface/dialogic_default_style.tres",
+"dialogic_default_style": "res://Assets/Interface/dialogic_default_style.tres"
+}
 glossary/default_case_sensitive=true
-layout/style_list=[]
+layout/style_list=["res://Assets/Interface/dialogic_default_style.tres"]
 variables={}
 extensions_folder="res://addons/dialogic_additions"
 text/letter_speed=0.01
@@ -52,7 +56,10 @@ choices/reveal_delay=0
 choices/reveal_by_input=false
 save/autosave_delay=60.0
 save/encryption_on_exports_only=true
-text/autopauses={}
+text/autopauses={
+"\"!?.\"": 0.5,
+"\",;\"": 0.2
+}
 audio/channel_defaults={
 "": {
 "audio_bus": "",
@@ -67,7 +74,9 @@ audio/channel_defaults={
 "volume": 0.0
 }
 }
-portraits/default_portrait=""
+layout/default_style="res://Assets/Interface/dialogic_default_style.tres"
+text/autocolor_names=false
+text/absolute_autopauses=false
 
 [display]
 

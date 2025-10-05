@@ -19,6 +19,7 @@ script = ExtResource("1_k70ag")
 TestTimelinePath = "res://Assets/Dialogue/Timelines/test_portraits.dtl"
 NameLabelPath = NodePath("CanvasLayer/TextArea/VBoxContainer/9patch/NameLabel")
 TextLabelPath = NodePath("CanvasLayer/TextArea/VBoxContainer/9patch2/MarginContainer/TextLabel")
+PortraitTopOffset = 100.0
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 layer = 10

@@ -1,34 +1,17 @@
-# DialogicLayout.gd
-# Minimal GDScript wrapper for Dialogic layout compatibility
-# All game logic is handled by DialogueControls.cs child node
-extends Control
+@tool
+extends DialogicPortrait
 
-## Required by Dialogic to identify this as a valid layout
-func _get_covered_rect() -> Rect2:
-	return Rect2(global_position, size)
+@export_file var image := ""
 
-## Called by Dialogic when the layout is ready
-func _ready() -> void:
-	# The C# DialogueControls child will handle initialization
-	pass
-
-## These methods might be called by Dialogic on portrait nodes
-## We implement stubs to prevent errors, but the actual portraits
-## will be instantiated by Dialogic and will have proper implementations
-func _highlight() -> void:
-	pass
-
-func _unhighlight() -> void:
-	pass
-
-func _should_do_portrait_update(_character, _portrait: String) -> bool:
-	return false
-
-func _update_portrait(_character, _portrait: String) -> void:
-	pass
-
-func _set_mirror(_mirrored: bool) -> void:
-	pass
-
-func _set_extra_data(_extra_data: String) -> void:
-	pass
+func _update_portrait(passed_character:DialogicCharacter, passed_portrait:String) -> void:
+	apply_character_and_portrait(passed_character, passed_portrait)
+	apply_texture($Portrait, image)
+	
+	var sprite = $Portrait as Sprite2D
+	if sprite and sprite.texture:
+		sprite.scale = Vector2.ONE
+		sprite.centered = false
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		sprite.position = Vector2.ZERO
+	
+	self.clip_contents = true
