@@ -1,12 +1,12 @@
-jose: Hay nako.
+jose: Hay nako. #id:11
 join jose left [animation="Fade In Up"]
-jose: Huwag mo na ako idamay sa mga kalokohan mo Nora.
-nora: Kalokohan lang ba kumita ng pera?
+jose: Huwag mo na ako idamay sa mga kalokohan mo Nora. #id:12
+nora: Kalokohan lang ba kumita ng pera? #id:13
 join nora right [animation="Fade In Up"]
-nora: Nako Jose kung nakita mo lang kung gaano kayaman sila Adolfo, baka mawala na din yang hiya mo. Kailangan mo din nama-
+nora: Nako Jose kung nakita mo lang kung gaano kayaman sila Adolfo, baka mawala na din yang hiya mo. Kailangan mo din nama- #id:14
 update jose [animation="Shake X"]
-jose: Tsk.
-jose: Di ako handa sa mga pinapagawa niya. Mas magaling ako lumigtas ng mga ligaw na pusa.
-nora: Talaga ba? Sinasabi mo yan habang nakahandusay iyang latigo sa iyong bewang.
-jose: Buntot Pagi. O siya paalam na muna, madami pa akong aasikasuhin.
-nora: Kukulitin pa rin kita bukas !
+jose: Tsk. #id:15
+jose: Di ako handa sa mga pinapagawa niya. Mas magaling ako lumigtas ng mga ligaw na pusa. #id:16
+nora: Talaga ba? Sinasabi mo yan habang nakahandusay iyang latigo sa iyong bewang. #id:17
+jose: Buntot Pagi. O siya paalam na muna, madami pa akong aasikasuhin. #id:18
+nora: Kukulitin pa rin kita bukas ! #id:19

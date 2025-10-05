@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="JoSe!!!"
+config/name="Thesis Game"
 config/tags=PackedStringArray("game", "thesis")
 run/main_scene="uid://bk6idb5cfptin"
 config/features=PackedStringArray("4.4", "C#", "Mobile")
@@ -44,7 +44,7 @@ text/initial_text_reveal_skippable=true
 text/text_reveal_skip_delay=0.1
 text/advance_delay=0.1
 text/autoadvance_per_character_delay=0.1
-text/autoadvance_ignored_characters_enabled=true
+text/autoadvance_ignored_characters_enabled=false
 animations/join_default_length=0.5
 animations/join_default_wait=true
 animations/leave_default_length=0.5
@@ -57,8 +57,10 @@ choices/reveal_by_input=false
 save/autosave_delay=60.0
 save/encryption_on_exports_only=true
 text/autopauses={
-"\"!?.\"": 0.5,
-"\",;\"": 0.2
+"!": 1.0,
+",": 1.0,
+".": 2.0,
+"?": 2.0
 }
 audio/channel_defaults={
 "": {
@@ -77,6 +79,17 @@ audio/channel_defaults={
 layout/default_style="res://Assets/Interface/dialogic_default_style.tres"
 text/autocolor_names=false
 text/absolute_autopauses=false
+translation/enabled=true
+translation/original_locale="en"
+translation/file_mode=1
+translation/translation_folder="res://Assets/Dialogue/Translations"
+translation/save_mode=0
+translation/add_separator=false
+translation/id_counter=29
+translation/locales=["en", "tl"]
+translation/intern/save_mode=0
+translation/intern/file_mode=1
+translation/intern/translation_folder="res://Assets/Dialogue/Translations"
 
 [display]
 
@@ -121,6 +134,11 @@ dialogic_default_action={
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":0,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://Assets/Dialogue/Translations/dialogic_character_translations.csv", "res://Assets/Dialogue/Translations/dialogic_test_portraits_translation.csv", "res://Assets/Dialogue/Translations/dialogic_character_translations.en.translation", "res://Assets/Dialogue/Translations/dialogic_test_portraits_translation.en.translation", "res://Assets/Dialogue/Translations/dialogic_test_portraits_translation.tl.translation", "res://Assets/Dialogue/Translations/dialogic_character_translations.tl.translation")
+locale/test="en"
 
 [rendering]
 
