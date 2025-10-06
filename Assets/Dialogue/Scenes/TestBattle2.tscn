@@ -32,6 +32,7 @@ script = ExtResource("4_t5ngx")
 
 [node name="DialogicContainer" parent="UI" instance=ExtResource("5_sdden")]
 TestTimelinePath = "res://Assets/Dialogue/Timelines/1379_test_portraits.dtl"
+metadata/_edit_use_anchors_ = true
 
 [node name="MenuActions" parent="UI" groups=["ui"] instance=ExtResource("6_3khu3")]
 anchors_preset = 12
@@ -41,6 +42,7 @@ offset_top = -177.0
 offset_right = -70.0
 offset_bottom = -145.0
 grow_vertical = 0
+metadata/_edit_use_anchors_ = true
 
 [node name="DynamicMenu" parent="UI" instance=ExtResource("7_l0imc")]
 anchors_preset = 14
@@ -50,3 +52,4 @@ offset_left = 223.0
 offset_top = -43.0
 offset_right = 7.0
 offset_bottom = -11.0
+metadata/_edit_use_anchors_ = true

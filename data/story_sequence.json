@@ -1,0 +1,33 @@
+{
+	"sequences": [
+	  {
+		"id": "test-01-0800",
+		"type": "vn",
+		"timeline": "res://Assets/Dialogue/Timelines/1379_test_portraits.dtl"
+	  },
+	  {
+		"id": "test-02-0900",
+		"type": "battle",
+		"scene": "res://Assets/Dialogue/Scenes/test-02-0900-forest.tscn",
+		"config": "res://data/battle_config.json"
+	  },
+	  {
+		"id": "test-03-1000",
+		"type": "ui",
+		"scene": "res://Assets/Dialogue/Scenes/UIScreens/test-03-1000-results.tscn",
+		"data": "{\"title\": \"Victory!\", \"p_earned\": \"15\"}"
+	  },
+	  {
+		"id": "test-04-1400",
+		"type": "battle",
+		"scene": "res://Assets/Dialogue/Scenes/test-04-1400-rooftop.tscn",
+		"config": "res://data/battle_config.json"
+	  },
+	  {
+		"id": "test-05-1600",
+		"type": "ui",
+		"scene": "res://Assets/Dialogue/Scenes/UIScreens/test-05-1600-gameover.tscn",
+		"data": "{\"title\": \"Game Over\"}"
+	  }
+	]
+  }

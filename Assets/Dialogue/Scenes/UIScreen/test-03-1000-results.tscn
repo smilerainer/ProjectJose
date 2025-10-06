@@ -1,0 +1,28 @@
+[gd_scene load_steps=2 format=3 uid="uid://exj0kbl6ppgo"]
+
+[ext_resource type="Script" uid="uid://b58vyqiprlhpt" path="res://Assets/Dialogue/Scenes/UIScreen/TestUIScreen.cs" id="1_xdlnm"]
+
+[node name="Test-03-1000-results" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_xdlnm")
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 142.0
+offset_top = 73.0
+offset_right = 182.0
+offset_bottom = 86.0
+text = "results:"
+
+[node name="Button" type="Button" parent="."]
+layout_mode = 0
+offset_left = 136.0
+offset_top = 94.0
+offset_right = 176.0
+offset_bottom = 134.0
+text = "BIG BUTTON"
