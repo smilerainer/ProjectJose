@@ -42,8 +42,6 @@ public partial class BattleManager : Node
 
     public override void _Ready()
     {
-        TestSceneManager();
-
         InitializeComponents();
         SetupBattle();
     }
@@ -236,47 +234,4 @@ public partial class BattleManager : Node
     }
 
     #endregion
-    
-    private void TestSceneManager()
-    {
-        var sceneManager = GetNodeOrNull<SceneManager>("/root/SceneManager");
-        
-        if (sceneManager == null)
-        {
-            GD.PrintErr("❌ SceneManager NOT found!");
-            return;
-        }
-        
-        GD.Print("✅ SceneManager found!");
-        
-        // Test P variable
-        GD.Print("\n=== Testing P Variable ===");
-        sceneManager.SetP(100);
-        GD.Print($"P value: {sceneManager.GetP()}");
-        
-        sceneManager.AddP(25);
-        GD.Print($"After adding 25: {sceneManager.GetP()}");
-        
-        // Test battle results storage
-        GD.Print("\n=== Testing Battle Results ===");
-        var testResults = new Dictionary<string, Variant>
-        {
-            ["victory"] = true,
-            ["p_earned"] = 25,
-            ["turns_taken"] = 5
-        };
-        
-        sceneManager.StoreBattleResults(testResults);
-        var retrieved = sceneManager.GetBattleResults();
-        GD.Print($"Stored and retrieved {retrieved.Count} results");
-        
-        // Test scene parameters
-        GD.Print("\n=== Testing Scene Parameters ===");
-        GD.Print($"Has battle_config: {sceneManager.HasSceneParameter("battle_config")}");
-        
-        // Print state
-        sceneManager.PrintCurrentState();
-        
-        GD.Print("\n✅ All tests passed!");
-    }
 }
