@@ -121,7 +121,26 @@ public partial class DialogueControls : Control
    
     private void StartTimeline()
     {
-        var dialogic = GetNode("/root/Dialogic");
+        // Use GetNodeOrNull and check if we're in the tree first
+        if (!IsInsideTree())
+        {
+            GD.PrintErr("[DialogueControls] Not in tree yet, cannot start timeline");
+            return;
+        }
+        
+        var dialogic = GetNodeOrNull("/root/Dialogic");
+        if (dialogic == null)
+        {
+            GD.PrintErr("[DialogueControls] Dialogic autoload not found - is Dialogic plugin enabled?");
+            return;
+        }
+        
+        if (string.IsNullOrEmpty(TestTimelinePath))
+        {
+            GD.Print("[DialogueControls] No test timeline path set, skipping auto-start");
+            return;
+        }
+        
         dialogic.Call("start", TestTimelinePath);
     }
     
