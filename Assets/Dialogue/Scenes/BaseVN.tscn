@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://duchkvokk8nb3"]
+
+[ext_resource type="PackedScene" uid="uid://d1rmcbblfp44v" path="res://Assets/Interface/DialogicCustom.tscn" id="1_gwkn1"]
+
+[node name="BaseVN" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="DialogicContainer" parent="." instance=ExtResource("1_gwkn1")]
+layout_mode = 1

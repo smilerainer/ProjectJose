@@ -137,33 +137,45 @@ public class BattleUIController
             inputManager.NotifyButtonFocusChanged();
         }
     }
-    
+
     #endregion
-    
+
     #region Target Selection UI
-    
+
+    // In BattleUIController.cs - StartTargetSelection method
     public void StartTargetSelection(List<Vector2I> validTargets, ActionConfig actionConfig)
     {
         targetSelectionActive = true;
-        currentActionConfig = actionConfig; // STORE IT
-        
+        currentActionConfig = actionConfig;
+
         HideMainMenu();
         HideSubmenu();
-        
+
         if (hexGrid != null)
         {
             hexGrid.ShowRangeHighlight(validTargets);
         }
-        
+
         if (hexControls != null)
         {
-            hexControls.SetActive(true);
+            GD.Print($"[BattleUI] Setting up HexControls - IsActive before: {hexControls.IsActive}");
+
+            hexControls.SetActionConfig(actionConfig, actionHandler);
             hexControls.SetValidCells(validTargets.ToHashSet());
-            hexControls.SetActionConfig(actionConfig, actionHandler); // PASS CONFIG + HANDLER
+            hexControls.SetActive(true);
+
+            GD.Print($"[BattleUI] HexControls SetActive(true) called - IsActive after: {hexControls.IsActive}");
+
             hexControls.EnterInteractionMode();
+
+            GD.Print($"[BattleUI] EnterInteractionMode() called - IsActive after: {hexControls.IsActive}");
         }
-        
-        //GD.Print($"[BattleUI] Target selection started - {validTargets.Count} valid targets, TargetType: {actionConfig.TargetType}");
+        else
+        {
+            GD.PrintErr("[BattleUI] HexControls is NULL!");
+        }
+
+        GD.Print($"[BattleUI] Target selection started - {validTargets.Count} valid targets");
     }
 
     

@@ -7,7 +7,7 @@
 [ext_resource type="TileSet" uid="uid://vbaxliadl1gn" path="res://Assets/World/Tilesets/Entity_TileSet.tres" id="5_t4wl5"]
 [ext_resource type="Script" uid="uid://dhitdsfdlky0x" path="res://Scripts/UI/HexControls.cs" id="6_54il7"]
 
-[node name="Forest" type="Node2D" node_paths=PackedStringArray("terrainLayer", "worldMarkerLayer", "obstacleLayer", "entityLayer", "markerLayer", "cursorLayer")]
+[node name="HexGrid" type="Node2D" node_paths=PackedStringArray("terrainLayer", "worldMarkerLayer", "obstacleLayer", "entityLayer", "markerLayer", "cursorLayer")]
 script = ExtResource("1_umg0f")
 terrainLayer = NodePath("Layers/Terrain")
 worldMarkerLayer = NodePath("Layers/WorldMarker")

@@ -1,6 +1,6 @@
-[gd_scene load_steps=8 format=3 uid="uid://ghxh40p084oj"]
+[gd_scene load_steps=8 format=3 uid="uid://cjkjiqxv7567r"]
 
-[ext_resource type="PackedScene" uid="uid://dxklvs4rimee1" path="res://Assets/Dialogue/Scenes/BattleMaps/Rooftop.tscn" id="1_54a8s"]
+[ext_resource type="PackedScene" uid="uid://dxklvs4rimee1" path="res://Assets/Dialogue/Scenes/Maps/Rooftop.tscn" id="1_54a8s"]
 [ext_resource type="Script" uid="uid://b6balrd0xxohw" path="res://Scripts/UI/CentralInputManager.cs" id="2_uf5ny"]
 [ext_resource type="Texture2D" uid="uid://dd4gmf5aygw7n" path="res://Assets/Interface/default_cursor_right.png" id="3_6blnv"]
 [ext_resource type="Script" uid="uid://dnpcp2rry7ahc" path="res://Scripts/Battle/BattleManager.cs" id="4_itflk"]

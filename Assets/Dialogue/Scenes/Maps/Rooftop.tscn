@@ -6,7 +6,7 @@
 [ext_resource type="TileSet" uid="uid://vbaxliadl1gn" path="res://Assets/World/Tilesets/Entity_TileSet.tres" id="4_w3rq5"]
 [ext_resource type="Script" uid="uid://dhitdsfdlky0x" path="res://Scripts/UI/HexControls.cs" id="5_rnd0a"]
 
-[node name="Rooftop" type="Node2D"]
+[node name="HexGrid" type="Node2D"]
 
 [node name="Layers" type="Node2D" parent="."]
 
@@ -29,8 +29,7 @@ tile_set = ExtResource("4_w3rq5")
 [node name="Marker" type="TileMapLayer" parent="Layers"]
 tile_set = ExtResource("3_vpiy6")
 
-[node name="HexControls" type="Node2D" parent="." node_paths=PackedStringArray("camera")]
+[node name="HexControls" type="Node2D" parent="."]
 script = ExtResource("5_rnd0a")
-camera = NodePath("")
 
 [node name="Camera2D" type="Camera2D" parent="."]

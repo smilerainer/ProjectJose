@@ -14,21 +14,7 @@ public partial class BattleManager : Node
     private BattleConfigurationLoader configLoader;
     private TurnManager turnManager;
     private NPCBehaviorManager npcBehaviorManager;
-
-    #endregion
-
-    #region Helper Methods for UI Controller
-
-    // Called by BattleUIController via CallDeferred
-    public void CallEnsureMenuFocus()
-    {
-        uiController?.CallEnsureMenuFocus();
-    }
-
-    public void CallConnectToDynamicMenu()
-    {
-        uiController?.CallConnectToDynamicMenu();
-    }
+    private SceneManager sceneManager;
 
     #endregion
 
@@ -42,13 +28,80 @@ public partial class BattleManager : Node
 
     public override void _Ready()
     {
+        CallDeferred(nameof(DeferredInitialize));
+    }
+
+    private void DeferredInitialize()
+    {
+        LoadBattleMap();
+        
+        // Force CentralInputManager to rediscover controls now that the map exists
+        var inputManager = GetTree().CurrentScene.GetNodeOrNull<CentralInputManager>("CentralInputManager");
+        if (inputManager != null)
+        {
+            inputManager.RediscoverControls();
+        }
+        
         InitializeComponents();
         SetupBattle();
     }
 
+    private void LoadBattleMap()
+    {
+        sceneManager = GetNodeOrNull<SceneManager>("/root/SceneManager");
+        if (sceneManager == null)
+        {
+            GD.PrintErr("[BattleManager] SceneManager not found!");
+            return;
+        }
+
+        if (!sceneManager.HasSceneParameter("map"))
+        {
+            GD.PrintErr("[BattleManager] No map parameter specified!");
+            return;
+        }
+
+        string mapPath = sceneManager.GetSceneParameter("map").AsString();
+        var mapScene = GD.Load<PackedScene>(mapPath);
+
+        if (mapScene == null)
+        {
+            GD.PrintErr($"[BattleManager] Failed to load map: {mapPath}");
+            return;
+        }
+
+        var mapInstance = mapScene.Instantiate<HexGrid>();
+        if (mapInstance == null)
+        {
+            GD.PrintErr($"[BattleManager] Map instance is not a HexGrid: {mapPath}");
+            return;
+        }
+
+        mapInstance.Name = "HexGrid";
+
+        // Add HexGrid to the scene
+        GetParent().AddChild(mapInstance);
+        GetParent().MoveChild(mapInstance, 0);
+
+        // Now move HexControls to be a child of HexGrid
+        var hexControls = GetParent().GetNodeOrNull<HexControls>("HexControls");
+        if (hexControls != null)
+        {
+            hexControls.GetParent().RemoveChild(hexControls);
+            mapInstance.AddChild(hexControls);
+            hexControls.FinalizeSetup(); // Initialize now that it has the correct parent
+            GD.Print("[BattleManager] Reparented HexControls to HexGrid");
+        }
+        else
+        {
+            GD.PrintErr("[BattleManager] HexControls not found - cannot reparent");
+        }
+
+        GD.Print($"[BattleManager] Loaded map: {mapPath}");
+    }
+
     private void InitializeComponents()
     {
-        // Initialize all battle subsystems
         configLoader = new BattleConfigurationLoader();
         stateManager = new BattleStateManager();
         uiController = new BattleUIController();
@@ -56,37 +109,48 @@ public partial class BattleManager : Node
         turnManager = new TurnManager();
         npcBehaviorManager = new NPCBehaviorManager();
 
-        // Setup dependencies between components
         SetupComponentDependencies();
         InitializeSceneManager();
     }
 
-    // In the SetupComponentDependencies() method, add:
     private void SetupComponentDependencies()
     {
-        // Wire up component references
-        uiController.Initialize(this);
+        // Initialize components that DON'T need HexGrid first
         actionHandler.Initialize(stateManager, configLoader);
         turnManager.Initialize(stateManager, uiController);
-        stateManager.Initialize(this);
-
-        // Initialize NPCBehaviorManager BEFORE connecting it to TurnManager
         npcBehaviorManager.Initialize(stateManager, configLoader, actionHandler);
-
-        // Connect NPC manager to turn manager (AFTER initialization)
         turnManager.SetNPCBehaviorManager(npcBehaviorManager);
-        
-        // Connect to battle end event ← ADD THIS
         turnManager.OnBattleEnded += OnBattleEnded;
+        
+        // Initialize components that NEED HexGrid last (after map is loaded)
+        stateManager.Initialize(this);
+        uiController.Initialize(this);
+    }
+
+    private void InitializeSceneManager()
+    {
+        if (sceneManager != null)
+        {
+            if (sceneManager.HasSceneParameter("battle_config"))
+            {
+                string customConfig = sceneManager.GetSceneParameter("battle_config").AsString();
+                if (!string.IsNullOrEmpty(customConfig))
+                {
+                    configFilePath = customConfig;
+                    GD.Print($"[BattleManager] Using config from SceneManager: {configFilePath}");
+                }
+            }
+
+            int pValue = sceneManager.GetP();
+            GD.Print($"[BattleManager] P value from SceneManager: {pValue}");
+        }
     }
 
     private void SetupBattle()
     {
         if (configLoader.LoadConfiguration(configFilePath))
         {
-            // Use this instead of SetupInitialBattleState()
             stateManager.SetupBattleFromConfig(configLoader.GetBattleConfig());
-
             uiController.SetupUI();
             turnManager.StartBattle();
         }
@@ -95,6 +159,7 @@ public partial class BattleManager : Node
             GD.PrintErr("[BattleManager] Failed to load battle configuration");
         }
     }
+
     #endregion
 
     #region Public API - Events from UI
@@ -103,7 +168,6 @@ public partial class BattleManager : Node
     {
         actionHandler.ProcessActionRequest(actionType, actionName);
 
-        // Show submenu through UI controller
         var availableActions = GetAvailableActionsForType(actionType);
         if (availableActions.Length > 0)
         {
@@ -139,40 +203,12 @@ public partial class BattleManager : Node
 
     #endregion
 
-    #region SceneManager Integration
+    #region Battle End Handling
 
-    private SceneManager sceneManager;
-
-    // Add this to InitializeComponents():
-    private void InitializeSceneManager()
-    {
-        sceneManager = GetNodeOrNull<SceneManager>("/root/SceneManager");
-
-        if (sceneManager != null)
-        {
-            // Check if we have custom battle config from SceneManager
-            if (sceneManager.HasSceneParameter("battle_config"))
-            {
-                string customConfig = sceneManager.GetSceneParameter("battle_config").AsString();
-                if (!string.IsNullOrEmpty(customConfig))
-                {
-                    configFilePath = customConfig;
-                    GD.Print($"[BattleManager] Using config from SceneManager: {configFilePath}");
-                }
-            }
-
-            // Sync P value to battle state if needed
-            int pValue = sceneManager.GetP();
-            GD.Print($"[BattleManager] P value from SceneManager: {pValue}");
-        }
-    }
-
-    // Call this when battle ends
     private void OnBattleEnded(bool playerWon)
     {
         if (sceneManager == null) return;
 
-        // Create and store battle results
         var results = new Dictionary<string, Variant>
         {
             ["victory"] = playerWon,
@@ -186,8 +222,8 @@ public partial class BattleManager : Node
         sceneManager.AddP(results["p_earned"].AsInt32());
 
         GD.Print($"[BattleManager] Battle ended - Victory: {playerWon}");
+        GD.Print($"[BattleManager] P earned: {results["p_earned"].AsInt32()}");
 
-        // Just advance to next scene in sequence
         sceneManager.LoadNextInSequence();
     }
 
@@ -201,10 +237,7 @@ public partial class BattleManager : Node
     {
         if (!victory) return 0;
 
-        // Base P for victory
         int baseP = 10;
-
-        // Bonus for efficiency (fewer turns)
         int turnBonus = Mathf.Max(0, 10 - turnManager.GetCurrentRound());
 
         return baseP + turnBonus;
@@ -212,7 +245,7 @@ public partial class BattleManager : Node
 
     #endregion
 
-    #region Component Access (for dependencies)
+    #region Component Access
 
     public BattleStateManager GetStateManager() => stateManager;
     public BattleUIController GetUIController() => uiController;
@@ -220,10 +253,19 @@ public partial class BattleManager : Node
     public BattleConfigurationLoader GetConfigLoader() => configLoader;
     public TurnManager GetTurnManager() => turnManager;
 
-
     #endregion
 
     #region Helper Methods
+
+    public void CallEnsureMenuFocus()
+    {
+        uiController?.CallEnsureMenuFocus();
+    }
+
+    public void CallConnectToDynamicMenu()
+    {
+        uiController?.CallConnectToDynamicMenu();
+    }
 
     private string[] GetAvailableActionsForType(string actionType)
     {

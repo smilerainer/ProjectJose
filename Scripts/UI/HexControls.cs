@@ -46,27 +46,39 @@ public partial class HexControls : Node2D
     #region Initialization
     public override void _Ready()
     {
+        // Don't try to get parent immediately - wait until we're properly parented
+        camera ??= GetViewport().GetCamera2D();
+        SetActive(false);
+
+        if (enableDebugLogs)
+            GD.Print("[HexControls] UI interface pre-initialized (waiting for HexGrid parent)");
+    }
+
+    private void InitializeWithHexGrid()
+    {
         hexGrid = GetParent<HexGrid>();
         if (hexGrid == null)
         {
             GD.PrintErr("[HexControls] ERROR: No HexGrid parent found!");
             return;
         }
-        
-        camera ??= GetViewport().GetCamera2D();
-        SetActive(false);
-        
-        if (enableDebugLogs) 
-            GD.Print("[HexControls] UI interface initialized");
+
+        if (enableDebugLogs)
+            GD.Print("[HexControls] UI interface initialized with HexGrid");
     }
     #endregion
 
     #region Public API
+
+    public void FinalizeSetup()
+    {
+        InitializeWithHexGrid();
+    }
     public void SetActive(bool active)
     {
         isActive = active;
         if (enableDebugLogs) GD.Print($"[HexControls] SetActive: {active}");
-        
+
         if (!active && !interactionModeActive)
         {
             hexGrid?.ClearLayer(CellLayer.Cursor);

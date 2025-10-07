@@ -174,11 +174,16 @@ public partial class CentralInputManager : Node2D
         if (!hexControls.Contains(hex))
             hexControls.Add(hex);
     }
+    public void RediscoverControls()
+    {
+        AutoDiscoverControls();
+        GD.Print($"[InputManager] Rediscovered controls - Menus: {menuControls.Count}, Hex: {hexControls.Count}");
+    }
     
     #endregion
-    
+
     #region Process Loop
-    
+
     public override void _Process(double delta)
     {
         UpdateActiveContext();
@@ -219,10 +224,10 @@ public partial class CentralInputManager : Node2D
             }
         }
     }
-    
+
     private void DetectActiveControl()
     {
-        // HIGHEST PRIORITY: Check if Dialogic is active AND has a timeline running
+        // Check Dialogic first
         if (dialogicAvailable && IsDialogicActive())
         {
             if (currentContext != InputContext.Dialogue)
@@ -230,23 +235,32 @@ public partial class CentralInputManager : Node2D
                 contextBeforeDialogue = currentContext;
                 controlBeforeDialogue = currentActiveControl;
             }
-            
+
             currentContext = InputContext.Dialogue;
             currentActiveControl = null;
             return;
         }
-        
-        // If we just exited dialogue, restore previous context if still valid
+
         if (currentContext == InputContext.Dialogue)
         {
             // Context will be re-evaluated below
         }
-        
+
         var activeMenus = menuControls.Where(m => m.IsActive).ToList();
-        var activeHex = hexControls.Where(h => h.IsActive).ToList();
-        
+
+        // FIXED: Only consider HexControls active if it's BOTH active AND in interaction mode
+        var activeHex = hexControls.Where(h => h.IsActive && h.IsInInteractionMode).ToList();
+
+        // DEBUG LOGGING
+        GD.Print($"[InputManager DEBUG] Active menus: {activeMenus.Count}, Active hex: {activeHex.Count}");
+        if (hexControls.Any(h => h.IsActive))
+        {
+            var hex = hexControls.First(h => h.IsActive);
+            GD.Print($"[InputManager DEBUG] HexControls found: {hex.Name}, IsInInteractionMode: {hex.IsInInteractionMode}");
+        }
+
         int totalActive = activeMenus.Count + activeHex.Count;
-        
+
         if (totalActive == 0)
         {
             currentContext = InputContext.None;
@@ -267,7 +281,6 @@ public partial class CentralInputManager : Node2D
         }
         else
         {
-            // Most recently initialized = last to become active
             // Prioritize HexGrid when multiple controls are active
             if (activeHex.Count > 0)
             {
