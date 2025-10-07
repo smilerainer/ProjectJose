@@ -222,18 +222,17 @@ public partial class CentralInputManager : Node2D
     
     private void DetectActiveControl()
     {
-        // HIGHEST PRIORITY: Check if Dialogic is active
+        // HIGHEST PRIORITY: Check if Dialogic is active AND has a timeline running
         if (dialogicAvailable && IsDialogicActive())
         {
             if (currentContext != InputContext.Dialogue)
             {
-                // Store previous context before switching to dialogue
                 contextBeforeDialogue = currentContext;
                 controlBeforeDialogue = currentActiveControl;
             }
             
             currentContext = InputContext.Dialogue;
-            currentActiveControl = null; // Dialogic handles itself
+            currentActiveControl = null;
             return;
         }
         

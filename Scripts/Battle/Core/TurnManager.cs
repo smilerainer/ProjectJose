@@ -12,6 +12,12 @@ public class TurnManager
     private NPCBehaviorManager npcBehaviorManager;
 
     #endregion
+    
+    #region Events
+
+    public System.Action<bool> OnBattleEnded; // bool = playerWon
+    
+    #endregion
 
     #region Turn State
 
@@ -224,8 +230,9 @@ public class TurnManager
     private void DetermineBattleOutcome()
     {
         var player = stateManager.GetPlayer();
+        bool playerWon = player?.IsAlive == true;
 
-        if (player?.IsAlive == true)
+        if (playerWon)
         {
             GD.Print("[TurnManager] === VICTORY ===");
         }
@@ -233,6 +240,9 @@ public class TurnManager
         {
             GD.Print("[TurnManager] === DEFEAT ===");
         }
+        
+        // Notify BattleManager
+        OnBattleEnded?.Invoke(playerWon);
     }
 
     #endregion

@@ -7,8 +7,14 @@
 [ext_resource type="TileSet" uid="uid://vbaxliadl1gn" path="res://Assets/World/Tilesets/Entity_TileSet.tres" id="5_t4wl5"]
 [ext_resource type="Script" uid="uid://dhitdsfdlky0x" path="res://Scripts/UI/HexControls.cs" id="6_54il7"]
 
-[node name="Forest" type="Node2D"]
+[node name="Forest" type="Node2D" node_paths=PackedStringArray("terrainLayer", "worldMarkerLayer", "obstacleLayer", "entityLayer", "markerLayer", "cursorLayer")]
 script = ExtResource("1_umg0f")
+terrainLayer = NodePath("Layers/Terrain")
+worldMarkerLayer = NodePath("Layers/WorldMarker")
+obstacleLayer = NodePath("Layers/Obstacle")
+entityLayer = NodePath("Layers/Entity")
+markerLayer = NodePath("Layers/Marker")
+cursorLayer = NodePath("Layers/Cursor")
 
 [node name="Layers" type="Node2D" parent="."]
 
@@ -31,8 +37,7 @@ tile_set = ExtResource("5_t4wl5")
 [node name="Marker" type="TileMapLayer" parent="Layers"]
 tile_set = ExtResource("4_x67fl")
 
-[node name="HexControls" type="Node2D" parent="." node_paths=PackedStringArray("camera")]
+[node name="HexControls" type="Node2D" parent="."]
 script = ExtResource("6_54il7")
-camera = NodePath("")
 
 [node name="Camera2D" type="Camera2D" parent="."]

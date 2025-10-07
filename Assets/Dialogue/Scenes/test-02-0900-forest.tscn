@@ -10,14 +10,16 @@
 
 [node name="Test-02-0900-forest" type="Node2D"]
 
-[node name="Forest" parent="." instance=ExtResource("1_efxmy")]
+[node name="HexGrid" parent="." instance=ExtResource("1_efxmy")]
 
-[node name="CentralInputManager" type="Node2D" parent="."]
+[node name="CentralInputManager" type="Node2D" parent="." node_paths=PackedStringArray("dynamicMenuRoot", "dialogueContainer")]
 position = Vector2(168, -70)
 scale = Vector2(2.94759, 1.28409)
 script = ExtResource("2_iblte")
 cursorTexture = ExtResource("3_geayh")
 uiCursorOffset = Vector2(-10, 0)
+dynamicMenuRoot = NodePath("../UI/DynamicMenu")
+dialogueContainer = NodePath("../UI/DialogicContainer")
 
 [node name="BattleManager" type="Node2D" parent="."]
 position = Vector2(167, -82)

@@ -61,6 +61,7 @@ public partial class BattleManager : Node
         InitializeSceneManager();
     }
 
+    // In the SetupComponentDependencies() method, add:
     private void SetupComponentDependencies()
     {
         // Wire up component references
@@ -70,10 +71,13 @@ public partial class BattleManager : Node
         stateManager.Initialize(this);
 
         // Initialize NPCBehaviorManager BEFORE connecting it to TurnManager
-        npcBehaviorManager.Initialize(stateManager, configLoader, actionHandler);  // ← Move this up
+        npcBehaviorManager.Initialize(stateManager, configLoader, actionHandler);
 
         // Connect NPC manager to turn manager (AFTER initialization)
         turnManager.SetNPCBehaviorManager(npcBehaviorManager);
+        
+        // Connect to battle end event ← ADD THIS
+        turnManager.OnBattleEnded += OnBattleEnded;
     }
 
     private void SetupBattle()

@@ -40,6 +40,7 @@ overrides = {}
 script = ExtResource("2_6415n")
 scene = ExtResource("6_r7s4b")
 overrides = {
+"name_label_custom_font_size": "0.0",
 "text_custom_color": "Color(1, 1, 1, 0)",
 "text_size": "0.0",
 "text_use_global_color": "false"
@@ -82,4 +83,4 @@ layer_info = {
 }
 base_overrides = {}
 layers = Array[ExtResource("2_6415n")]([])
-metadata/_latest_layer = "12"
+metadata/_latest_layer = "13"

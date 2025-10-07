@@ -10,7 +10,7 @@
 
 [node name="Test-04-1400-rooftop" type="Node2D"]
 
-[node name="Rooftop" parent="." instance=ExtResource("1_54a8s")]
+[node name="HexGrid" parent="." instance=ExtResource("1_54a8s")]
 
 [node name="CentralInputManager" type="Node2D" parent="." node_paths=PackedStringArray("dynamicMenuRoot", "dialogueContainer")]
 position = Vector2(168, -70)
@@ -18,8 +18,8 @@ scale = Vector2(2.94759, 1.28409)
 script = ExtResource("2_uf5ny")
 cursorTexture = ExtResource("3_6blnv")
 uiCursorOffset = Vector2(-10, 0)
-dynamicMenuRoot = NodePath("")
-dialogueContainer = NodePath("")
+dynamicMenuRoot = NodePath("../UI/DynamicMenu")
+dialogueContainer = NodePath("../UI/DialogicContainer")
 
 [node name="BattleManager" type="Node2D" parent="."]
 position = Vector2(167, -82)

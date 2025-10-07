@@ -8,9 +8,9 @@ public partial class SceneManager : Node
     #region Configuration
     
     private const string SEQUENCE_DATA_PATH = "res://data/story_sequence.json";
-    private const string VN_SCENE_TEMPLATE = "res://Assets/Interface/DialogicCustom.tscn";
+    private const string VN_SCENE_TEMPLATE = "res://Assets/Dialogue/Scenes/test-01-0800-intro.tscn";
     
-    [Export] private bool testMode = false;
+    [Export] private bool testMode = true;
     [Export] private int testStartIndex = 0;
     
     #endregion
@@ -36,8 +36,12 @@ public partial class SceneManager : Node
         {
             dialogicAutoload.Connect("timeline_ended", new Callable(this, nameof(OnTimelineEnded)));
             dialogicAutoload.Connect("signal_event", new Callable(this, nameof(OnDialogicSignal)));
+            
+            // Initialize P variable in Dialogic
+            SyncPToDialogic();
         }
         
+        GD.Print("[SceneManager] Initialized");
         LoadSequence(SEQUENCE_DATA_PATH);
     }
     
@@ -136,20 +140,63 @@ public partial class SceneManager : Node
     private void SyncPToDialogic()
     {
         if (dialogicAutoload == null) return;
-        var varSystemVariant = dialogicAutoload.Get("VAR");
-        if (varSystemVariant.VariantType == Variant.Type.Object)
-            varSystemVariant.AsGodotObject()?.Call("set_variable", "P", pValue);
+        
+        try
+        {
+            var varSystemVariant = dialogicAutoload.Get("VAR");
+            if (varSystemVariant.VariantType == Variant.Type.Object)
+            {
+                var varSystem = varSystemVariant.AsGodotObject();
+                if (varSystem != null)
+                {
+                    // Dialogic's set_variable will create the variable if it doesn't exist
+                    // So we can safely call it without checking first
+                    varSystem.Call("set_variable", "P", pValue);
+                    
+                    // Verify it was set
+                    var verifyVar = varSystem.Call("get_variable", "P");
+                    if (verifyVar.Obj != null)
+                    {
+                        GD.Print($"[SceneManager] Synced P to Dialogic: {pValue}");
+                    }
+                    else
+                    {
+                        GD.PrintErr($"[SceneManager] Failed to set P variable in Dialogic");
+                    }
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            GD.PrintErr($"[SceneManager] Error syncing P: {e.Message}");
+        }
     }
     
     public void LoadPFromDialogic()
     {
         if (dialogicAutoload == null) return;
-        var varSystemVariant = dialogicAutoload.Get("VAR");
-        if (varSystemVariant.VariantType == Variant.Type.Object)
+        
+        try
         {
-            var varSystem = varSystemVariant.AsGodotObject();
-            if (varSystem != null && (bool)varSystem.Call("has_variable", "P"))
-                pValue = (int)varSystem.Call("get_variable", "P");
+            var varSystemVariant = dialogicAutoload.Get("VAR");
+            if (varSystemVariant.VariantType == Variant.Type.Object)
+            {
+                var varSystem = varSystemVariant.AsGodotObject();
+                if (varSystem != null)
+                {
+                    // Use Dialogic's VAR.get_variable() method correctly
+                    var pVar = varSystem.Call("get_variable", "P");
+                    if (pVar.Obj != null)
+                    {
+                        pValue = pVar.AsInt32();
+                        GD.Print($"[SceneManager] Loaded P from Dialogic: {pValue}");
+                    }
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            GD.PrintErr($"[SceneManager] Error loading P: {e.Message}");
         }
     }
     
