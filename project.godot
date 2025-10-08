@@ -23,6 +23,7 @@ config/icon="res://icon.svg"
 
 Dialogic="*res://addons/dialogic/Core/DialogicGameHandler.gd"
 SceneManager="*res://Scripts/UI/SceneManager.cs"
+InventoryManager="*res://Scripts/UI/InventoryManager.cs"
 
 [dialogic]
 

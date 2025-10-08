@@ -901,6 +901,43 @@ public class BattleActionHandler
     }
 
     #endregion
+
+    #region Inventory Support
+    
+    /// Manually set the current action config (for inventory items)
+    public void SetCurrentActionConfig(ActionConfig config)
+    {
+        currentActionConfig = config;
+        currentActionType = "item"; // Set type to item
+        selectedActionOption = config.Name;
+
+        if (config != null)
+        {
+            currentValidTargets = CalculateValidTargets(config);
+            DebugLog($"Manually set action config: {config.Name}, {currentValidTargets.Count} valid targets");
+        }
+    }
+
+    /// Execute item usage and consume from inventory
+    private void ExecuteInventoryItem(Vector2I targetCell, ActionConfig config)
+    {
+        DebugLog($"Executing inventory item: {config.Name} on {targetCell}");
+        
+        // Execute the effect (same as regular item)
+        ExecuteItemAction(targetCell, config);
+        
+        // Consume from inventory manager
+        if (InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.UseItem(
+                config.Id, 
+                InventoryManager.ItemContext.Battle,
+                targetCell
+            );
+        }
+    }
+
+    #endregion
     
     #region Debug
 

@@ -35,7 +35,6 @@ public partial class BattleManager : Node
     {
         LoadBattleMap();
         
-        // Force CentralInputManager to rediscover controls now that the map exists
         var inputManager = GetTree().CurrentScene.GetNodeOrNull<CentralInputManager>("CentralInputManager");
         if (inputManager != null)
         {
@@ -43,6 +42,7 @@ public partial class BattleManager : Node
         }
         
         InitializeComponents();
+        InitializeInventoryControls();
         SetupBattle();
     }
 
@@ -164,19 +164,57 @@ public partial class BattleManager : Node
 
     #region Public API - Events from UI
 
+
     public void OnActionRequested(string actionType, string actionName)
     {
-        actionHandler.ProcessActionRequest(actionType, actionName);
-
-        var availableActions = GetAvailableActionsForType(actionType);
-        if (availableActions.Length > 0)
+        if (actionType == "item")
         {
-            uiController.ShowSubmenu(availableActions);
+            // Open inventory UI instead of dynamic menu
+            if (inventoryControls != null)
+            {
+                uiController.HideMainMenu();
+                inventoryControls.Open(InventoryManager.ItemContext.Battle);
+            }
+            else
+            {
+                GD.PrintErr("[BattleManager] Cannot open inventory - inventoryControls not assigned!");
+            }
+        }
+        else
+        {
+            // Normal action handling
+            actionHandler.ProcessActionRequest(actionType, actionName);
+
+            var availableActions = GetAvailableActionsForType(actionType);
+            if (availableActions.Length > 0)
+            {
+                uiController.ShowSubmenu(availableActions);
+            }
         }
     }
-
     public void OnSubmenuSelection(string actionName)
     {
+        // Check if this is an inventory item
+        if (InventoryManager.Instance != null)
+        {
+            var item = InventoryManager.Instance.GetItem(actionName);
+            if (item != null)
+            {
+                // Convert inventory item to ActionConfig for targeting
+                var itemConfig = ConvertItemToActionConfig(item);
+                if (itemConfig != null)
+                {
+                    actionHandler.ProcessSubmenuSelection(actionName);
+                    actionHandler.SetCurrentActionConfig(itemConfig); // You'll need to add this method
+
+                    var validTargets = actionHandler.GetValidTargetsForCurrentAction();
+                    uiController.StartTargetSelection(validTargets, itemConfig);
+                    return;
+                }
+            }
+        }
+
+        // Normal action handling (skills, talk, etc.)
         actionHandler.ProcessSubmenuSelection(actionName);
 
         var actionConfig = actionHandler.GetCurrentActionConfig();
@@ -245,6 +283,48 @@ public partial class BattleManager : Node
 
     #endregion
 
+    #region Inventory Integration
+
+    [Export] private InventoryControls inventoryControls;
+    private void InitializeInventoryControls()
+    {
+        if (inventoryControls == null)
+        {
+            GD.PrintErr("[BattleManager] inventoryControls not assigned in exports!");
+        }
+    }
+
+    private string[] GetInventoryItemNames()
+    {
+        if (InventoryManager.Instance == null)
+            return new string[0];
+        
+        var items = InventoryManager.Instance.GetItemsByContext(
+            InventoryManager.ItemContext.Battle
+        );
+        
+        return items.Select(i => i.Name).ToArray();
+    }
+    private CustomJsonSystem.ActionConfig ConvertItemToActionConfig(InventoryManager.InventoryItem item)
+    {
+        return new CustomJsonSystem.ActionConfig
+        {
+            Id = item.Id,
+            Name = item.Name,
+            Description = item.Description,
+            Damage = item.Damage,
+            HealAmount = item.HealAmount,
+            StatusEffect = item.StatusEffect,
+            StatusDuration = item.StatusDuration,
+            Range = item.Range > 0 ? item.Range : 2,
+            TargetType = !string.IsNullOrEmpty(item.TargetType) ? item.TargetType : "Single",
+            Cost = item.Cost,
+            UsesRemaining = item.Quantity
+        };
+    }
+
+    #endregion
+
     #region Component Access
 
     public BattleStateManager GetStateManager() => stateManager;
@@ -266,14 +346,13 @@ public partial class BattleManager : Node
     {
         uiController?.CallConnectToDynamicMenu();
     }
-
     private string[] GetAvailableActionsForType(string actionType)
     {
         return actionType switch
         {
             "move" => configLoader.GetMoveOptionNames(),
             "skill" => configLoader.GetSkillNames(),
-            "item" => configLoader.GetItemNames(),
+            "item" => GetInventoryItemNames(), // ← CHANGED
             "talk" => configLoader.GetTalkOptionNames(),
             _ => new string[0]
         };
