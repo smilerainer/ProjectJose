@@ -45,8 +45,6 @@ This is a **turn-based tactical battle system** built in Godot 4 with C#.
 - Settings menu
 - Save/load system
 
-See [[TODO & Roadmap]] for detailed implementation plan.
-
 ## Quick Start for Developers
 
 ### Running the System
@@ -55,35 +53,12 @@ See [[TODO & Roadmap]] for detailed implementation plan.
 3. Battle config: `res://data/battle_config.json`
 4. Sequence config: `res://data/story_sequence.json`
 
-### Adding New Features
-- New action? See [[Action System]]
-- New AI behavior? See [[AI Behaviors]]
-- New UI screen? See [[Common Patterns]]
-
 ### Key Files
 - `BattleManager.cs` - Start here for battle logic
 - `HexGrid.cs` - Pure math engine
 - `Entity.cs` - Data model for all combatants
 - `CentralInputManager.cs` - Input routing
 - `battle_config.json` - Defines skills/items/entities
-
-## Architecture Overview
-
-```
-CentralInputManager (input router)
-        ↓
-BattleManager (coordinator)
-    ├── BattleStateManager (entity tracking)
-    ├── BattleUIController (UI display)
-    ├── BattleActionHandler (action execution)
-    ├── TurnManager (turn order)
-    ├── NPCBehaviorManager (AI decisions)
-    └── BattleConfigurationLoader (JSON loading)
-
-HexGrid (pure math)
-    ├── HexControls (UI interface)
-    └── TileMapLayers (visual display)
-```
 
 ## Contributing Guidelines
 
