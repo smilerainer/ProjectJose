@@ -148,8 +148,15 @@ public class BattleUIController
         targetSelectionActive = true;
         currentActionConfig = actionConfig;
 
+        // CRITICAL: Fully hide all menus first
         HideMainMenu();
         HideSubmenu();
+
+        // Double-check all menus are actually inactive
+        if (menuControls != null)
+        {
+            menuControls.SetActive(false);
+        }
 
         if (hexGrid != null)
         {
@@ -158,17 +165,15 @@ public class BattleUIController
 
         if (hexControls != null)
         {
-            GD.Print($"[BattleUI] Setting up HexControls - IsActive before: {hexControls.IsActive}");
+            GD.Print($"[BattleUI] Setting up HexControls - IsActive before: {hexControls.IsActive}, IsInInteractionMode: {hexControls.IsInInteractionMode}");
 
             hexControls.SetActionConfig(actionConfig, actionHandler);
             hexControls.SetValidCells(validTargets.ToHashSet());
-            hexControls.SetActive(true);
 
-            GD.Print($"[BattleUI] HexControls SetActive(true) called - IsActive after: {hexControls.IsActive}");
-
+            // Remove the redundant SetActive(true) - EnterInteractionMode does this
             hexControls.EnterInteractionMode();
 
-            GD.Print($"[BattleUI] EnterInteractionMode() called - IsActive after: {hexControls.IsActive}");
+            GD.Print($"[BattleUI] EnterInteractionMode() called - IsActive: {hexControls.IsActive}, IsInInteractionMode: {hexControls.IsInInteractionMode}");
         }
         else
         {

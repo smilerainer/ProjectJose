@@ -46,34 +46,41 @@ public partial class HexControls : Node2D
     #region Initialization
     public override void _Ready()
     {
-        // Don't try to get parent immediately - wait until we're properly parented
+        // Don't require HexGrid parent immediately
+        TryInitializeHexGrid();
+        
         camera ??= GetViewport().GetCamera2D();
         SetActive(false);
-
-        if (enableDebugLogs)
-            GD.Print("[HexControls] UI interface pre-initialized (waiting for HexGrid parent)");
+        
+        if (enableDebugLogs) 
+            GD.Print("[HexControls] UI interface initialized");
     }
 
-    private void InitializeWithHexGrid()
+    private bool TryInitializeHexGrid()
     {
+        if (hexGrid != null) return true;
+        
         hexGrid = GetParent<HexGrid>();
-        if (hexGrid == null)
+        
+        if (hexGrid == null && enableDebugLogs)
         {
-            GD.PrintErr("[HexControls] ERROR: No HexGrid parent found!");
-            return;
+            GD.Print("[HexControls] HexGrid parent not found yet - will retry when needed");
         }
+        
+        return hexGrid != null;
+    }
 
-        if (enableDebugLogs)
-            GD.Print("[HexControls] UI interface initialized with HexGrid");
+    public void FinalizeSetup()
+    {
+        if (TryInitializeHexGrid() && enableDebugLogs)
+        {
+            GD.Print("[HexControls] Finalized setup with HexGrid parent");
+        }
     }
     #endregion
 
     #region Public API
 
-    public void FinalizeSetup()
-    {
-        InitializeWithHexGrid();
-    }
     public void SetActive(bool active)
     {
         isActive = active;
@@ -84,22 +91,26 @@ public partial class HexControls : Node2D
             hexGrid?.ClearLayer(CellLayer.Cursor);
         }
     }
-
     public void EnterInteractionMode()
     {
-        if (hexGrid == null) return;
-        
+        // Try to initialize if not done yet
+        if (!TryInitializeHexGrid())
+        {
+            GD.PrintErr("[HexControls] Cannot enter interaction mode - no HexGrid parent!");
+            return;
+        }
+
         if (enableDebugLogs) GD.Print("[HexControls] EnterInteractionMode");
-        
+
         interactionModeActive = true;
         justEntered = true;
         SetActive(true);
         SetCameraFollow(true);
-        
+
         cursorPosition = FindPlayerPosition();
         CalculateAdjacentCells();
         DrawCursor();
-        
+
         if (enableDebugLogs) GD.Print($"[HexControls] Interaction mode active - cursor at {cursorPosition}");
     }
 

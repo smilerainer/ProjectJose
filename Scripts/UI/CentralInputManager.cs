@@ -431,20 +431,24 @@ public partial class CentralInputManager : Node2D
                 break;
         }
     }
-    
+
     private void HandleMenuInput(MenuControls menu, InputEvent @event)
     {
+        GD.Print($"[InputManager] HandleMenuInput called - Menu: {menu.Name}, IsActive: {menu.IsActive}");
+
         if (TryHandleCancel(@event, menu)) return;
-        
+
         var direction = GetDirectionInput(@event);
         if (direction != Vector2I.Zero)
         {
+            GD.Print($"[InputManager] Navigation input: {direction}");
             menu.Navigate(direction);
             UpdateCursorTarget();
             GetViewport().SetInputAsHandled();
         }
         else if (IsAcceptInput(@event))
         {
+            GD.Print($"[InputManager] Accept input detected");
             if (isShowingSubmenu && menu == GetDynamicMenu())
             {
                 NotifySubmenuSelection(menu);
@@ -555,8 +559,8 @@ public partial class CentralInputManager : Node2D
         UpdateCursorVisibility();
         UpdateCursorTarget();
     }
-    
-    public void ClearSubmenu()
+
+    public void ClearSubmenu(bool restorePreviousMenu = true)
     {
         var dynamicMenu = GetDynamicMenu();
         if (dynamicMenu != null)
@@ -564,11 +568,11 @@ public partial class CentralInputManager : Node2D
             dynamicMenu.SetActive(false);
             dynamicMenu.ClearAllButtons();
         }
-        
+
         isShowingSubmenu = false;
         currentSubmenuContext = "";
-        
-        if (previousMenu != null)
+
+        if (restorePreviousMenu && previousMenu != null)
         {
             previousMenu.SetActive(true);
             currentActiveControl = previousMenu;
@@ -579,6 +583,7 @@ public partial class CentralInputManager : Node2D
         }
         else
         {
+            previousMenu = null;
             currentActiveControl = null;
             currentContext = InputContext.None;
         }
@@ -588,10 +593,10 @@ public partial class CentralInputManager : Node2D
     {
         ShowSubmenu(buttonTexts, "dynamic");
     }
-    
+
     public void ClearDynamicMenu()
     {
-        ClearSubmenu();
+        ClearSubmenu(restorePreviousMenu: false);  // ← Don't restore menu!
     }
     
     private void NotifySubmenuSelection(MenuControls menu)

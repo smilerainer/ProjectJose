@@ -1,12 +1,20 @@
-[gd_scene load_steps=6 format=4 uid="uid://dxklvs4rimee1"]
+[gd_scene load_steps=7 format=4 uid="uid://dxklvs4rimee1"]
 
 [ext_resource type="TileSet" uid="uid://mkn6xih8ecpo" path="res://Assets/World/Tilesets/Ground_TileSet.tres" id="1_2wlkp"]
+[ext_resource type="Script" uid="uid://bot17no0e0dm8" path="res://Scripts/UI/HexGrid.cs" id="1_q7mk7"]
 [ext_resource type="TileSet" uid="uid://h8ctwsrda6b3" path="res://Assets/World/Tilesets/Obstacle_TileSet.tres" id="2_241as"]
 [ext_resource type="TileSet" uid="uid://vdekyx1aewa0" path="res://Assets/World/Tilesets/UI_TileSet.tres" id="3_vpiy6"]
 [ext_resource type="TileSet" uid="uid://vbaxliadl1gn" path="res://Assets/World/Tilesets/Entity_TileSet.tres" id="4_w3rq5"]
 [ext_resource type="Script" uid="uid://dhitdsfdlky0x" path="res://Scripts/UI/HexControls.cs" id="5_rnd0a"]
 
-[node name="HexGrid" type="Node2D"]
+[node name="HexGrid" type="Node2D" node_paths=PackedStringArray("terrainLayer", "worldMarkerLayer", "obstacleLayer", "entityLayer", "markerLayer", "cursorLayer")]
+script = ExtResource("1_q7mk7")
+terrainLayer = NodePath("Layers/Terrain")
+worldMarkerLayer = NodePath("Layers/WorldMarker")
+obstacleLayer = NodePath("Layers/Obstacle")
+entityLayer = NodePath("Layers/Entity")
+markerLayer = NodePath("Layers/Marker")
+cursorLayer = NodePath("Layers/Cursor")
 
 [node name="Layers" type="Node2D" parent="."]
 
